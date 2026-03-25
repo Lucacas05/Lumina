@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --color-surface: #181210;
+  --color-surface-dim: #181210;
+  --color-surface-bright: #3f3835;
+  --color-surface-container-lowest: #130d0b;
+  --color-surface-container-low: #201a18;
+  --color-surface-container: #251e1c;
+  --color-surface-container-high: #2f2826;
+  --color-surface-container-highest: #3b3331;
+  
+  --color-on-surface: #ede0dc;
+  --color-on-surface-variant: #c3c8be;
+  
+  --color-primary: #ffb961;
+  --color-on-primary: #472a00;
+  --color-primary-container: #623c00;
+  --color-on-primary-container: #eca241;
+  
+  --color-secondary: #e7bdb1;
+  --color-on-secondary: #442a22;
+  --color-secondary-container: #5d4037;
+  --color-on-secondary-container: #d4aca0;
+  
+  --color-tertiary: #add0a8;
+  --color-on-tertiary: #19371b;
+  --color-tertiary-container: #2d4b2d;
+  --color-on-tertiary-container: #98ba94;
+
+  --color-outline: #8d9289;
+  --color-outline-variant: #434841;
+  
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body selection:bg-primary-container selection:text-primary;
+  }
+}
+
+@layer utilities {
+  .pixel-border {
+    box-shadow: 
+      0 -4px 0 0 var(--color-surface-container-highest),
+      0 4px 0 0 var(--color-surface-container-highest),
+      -4px 0 0 0 var(--color-surface-container-highest),
+      4px 0 0 0 var(--color-surface-container-highest);
+  }
+
+  .pixel-border-inset {
+    box-shadow: 
+      inset 0 -4px 0 0 rgba(0,0,0,0.5),
+      inset 0 4px 0 0 rgba(255,255,255,0.1),
+      inset -4px 0 0 0 rgba(255,255,255,0.1),
+      inset 4px 0 0 0 rgba(0,0,0,0.5);
+  }
+
+  .pixel-shadow {
+    box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.5);
+  }
+
+  .bezel-button {
+    box-shadow: 
+      inset -3px -3px 0px 0px #663e00,
+      inset 3px 3px 0px 0px #ffddb8;
+  }
+
+  .bezel-button:active {
+    box-shadow: 
+      inset 3px 3px 0px 0px #663e00,
+      inset -3px -3px 0px 0px #ffddb8;
+    transform: translateY(2px);
+  }
+
+  .dither-bg {
+    background-image: radial-gradient(var(--color-surface-container-highest) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+
+  .steps-bezel {
+    transition-timing-function: steps(4);
+  }
+}
+
+/* Custom scrollbar for the RPG feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-surface-container-lowest;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-surface-container-highest border-2 border-surface-container-low;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-outline;
+}
