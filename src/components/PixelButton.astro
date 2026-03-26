@@ -1,0 +1,64 @@
+---
+import { ICONS, type IconName } from "@/lib/icons";
+
+interface Props {
+  href?: string;
+  variant?: "primary" | "secondary" | "tertiary" | "ghost";
+  icon?: IconName;
+  size?: "sm" | "md" | "lg";
+  fullWidth?: boolean;
+  class?: string;
+  type?: "button" | "submit" | "reset";
+  ariaLabel?: string;
+}
+
+const {
+  href,
+  variant = "primary",
+  icon,
+  size = "md",
+  fullWidth = false,
+  class: className = "",
+  type = "button",
+  ariaLabel,
+} = Astro.props as Props;
+
+const Icon = icon ? ICONS[icon] : null;
+
+const variants = {
+  primary: "bg-primary text-on-primary border-b-[3px] border-on-primary-fixed-variant hover:brightness-105",
+  secondary: "bg-tertiary text-on-tertiary border-b-[3px] border-on-tertiary-fixed-variant hover:brightness-105",
+  tertiary: "bg-surface-container-highest text-on-surface border-2 border-outline-variant/50 hover:border-primary/50",
+  ghost: "bg-transparent text-outline hover:text-primary",
+};
+
+const sizes = {
+  sm: "px-3 py-1 text-[10px]",
+  md: "px-6 py-2 text-xs",
+  lg: "px-8 py-3 text-sm",
+};
+
+const classes = [
+  variants[variant],
+  sizes[size],
+  fullWidth ? "w-full" : "",
+  "font-headline font-bold uppercase tracking-widest steps-bezel",
+  "inline-flex items-center justify-center gap-2",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+  className,
+]
+  .filter(Boolean)
+  .join(" ");
+---
+
+{href ? (
+  <a href={href} class={classes} aria-label={ariaLabel}>
+    {Icon && <Icon size={16} />}
+    <slot />
+  </a>
+) : (
+  <button type={type} class={classes} aria-label={ariaLabel}>
+    {Icon && <Icon size={16} />}
+    <slot />
+  </button>
+)}

@@ -1,0 +1,136 @@
+---
+import PixelCard from "@/components/PixelCard.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteContent, images } from "@/data/site";
+import { ICONS } from "@/lib/icons";
+
+const { refine } = siteContent;
+---
+
+<BaseLayout title="Refinar" currentPath="/refinar">
+  <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-8 pb-8 md:pb-52">
+    <aside class="w-full md:w-80 flex flex-col gap-6">
+      <PixelCard title={refine.garmentsTitle} variant="high">
+        <div class="grid grid-cols-1 gap-4">
+          {refine.garments.map((garment) => {
+            const Icon = ICONS[garment.icon];
+            return (
+              <button
+                type="button"
+                class:list={[
+                  "flex items-center gap-4 p-4 hover:bg-surface-container-low transition-all steps-bezel group text-left",
+                  garment.active
+                    ? "bg-surface-container-highest border-l-4 border-primary"
+                    : "bg-surface-container-low border-l-4 border-transparent",
+                ]}
+              >
+                <div class="w-12 h-12 bg-surface-container-lowest flex items-center justify-center p-2">
+                  <Icon className={garment.active ? "text-primary" : "text-outline group-hover:text-primary"} size={24} />
+                </div>
+                <div>
+                  <p class="font-headline text-on-surface text-sm uppercase font-bold tracking-tight">{garment.title}</p>
+                  <p class="text-[10px] text-outline uppercase tracking-widest mt-1">{garment.subtitle}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </PixelCard>
+
+      <PixelCard title={refine.artifactsTitle} variant="high">
+        <div class="grid grid-cols-2 gap-3">
+          {refine.artifacts.map((artifact) => {
+            const Icon = ICONS[artifact.icon];
+            return (
+              <button
+                type="button"
+                class:list={[
+                  "aspect-square flex flex-col items-center justify-center gap-2 border-b-4 transition-all steps-bezel",
+                  artifact.active
+                    ? "bg-surface-container-highest border-primary"
+                    : "bg-surface-container-low border-surface-container-lowest opacity-60 grayscale hover:grayscale-0 hover:opacity-100",
+                ]}
+              >
+                <Icon size={24} className={artifact.active ? "text-primary" : "text-outline"} />
+                <span class="text-[9px] font-bold uppercase tracking-tighter">{artifact.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </PixelCard>
+    </aside>
+
+    <section class="flex-grow flex flex-col items-center justify-center relative min-h-[500px]">
+      <div class="absolute inset-0 dither-bg opacity-20 -z-10"></div>
+      <div class="relative group">
+        <div class="absolute -inset-4 border-4 border-surface-container-highest pointer-events-none"></div>
+        <div class="absolute -inset-1 border-2 border-primary-container pointer-events-none opacity-50"></div>
+        <div class="w-80 h-[480px] bg-surface-container-low overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <img
+            src={images.archivalScribe}
+            class="w-full h-full object-cover grayscale brightness-75 contrast-125"
+            alt={refine.portraitAlt}
+            loading="eager"
+            decoding="async"
+          />
+          <div class="absolute bottom-0 left-0 w-full bg-surface-container-highest/90 p-4 border-t-4 border-primary">
+            <div class="flex justify-between items-end">
+              <div>
+                <p class="text-[10px] text-primary uppercase font-bold tracking-[0.2em]">{refine.incarnationLabel}</p>
+                <h1 class="font-headline text-xl text-on-surface font-black uppercase tracking-tight">{refine.incarnationTitle}</h1>
+              </div>
+              <div class="text-right">
+                <p class="text-[10px] text-outline uppercase font-bold">Lvl 42</p>
+                <div class="w-16 h-1 bg-surface-container-lowest mt-1">
+                  <div class="w-3/4 h-full bg-primary"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 flex flex-wrap gap-4 justify-center">
+        <div class="bg-tertiary-container px-4 py-2 border-b-4 border-on-tertiary-fixed-variant flex items-center gap-2">
+          <ICONS.Brain className="text-tertiary" size={18} />
+          <span class="font-headline text-tertiary font-bold text-xs uppercase tracking-widest">{refine.focusStat}</span>
+        </div>
+        <div class="bg-secondary-container px-4 py-2 border-b-4 border-on-secondary-fixed-variant flex items-center gap-2">
+          <ICONS.BookOpen className="text-secondary" size={18} />
+          <span class="font-headline text-secondary font-bold text-xs uppercase tracking-widest">{refine.loreStat}</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="w-full md:w-80 flex flex-col gap-6">
+      <PixelCard title={refine.loreTitle} variant="high" class="relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-16 h-16 opacity-10">
+          <ICONS.Castle size={80} />
+        </div>
+        <div class="space-y-4">
+          <p class="text-on-surface-variant text-sm leading-relaxed font-body italic">{refine.lore}</p>
+          <div class="h-px bg-outline-variant/30"></div>
+          <div class="flex flex-col gap-2">
+            <span class="text-[10px] text-outline uppercase font-black">{refine.sanctuaryLabel}</span>
+            <div class="flex items-center gap-2">
+              <ICONS.MapPin className="text-primary" size={14} />
+              <span class="text-xs font-bold uppercase text-on-surface">{refine.sanctuaryValue}</span>
+            </div>
+          </div>
+        </div>
+      </PixelCard>
+
+      <div class="bg-surface-container p-4 border-2 border-dashed border-outline-variant">
+        <h3 class="text-[10px] text-outline uppercase font-bold mb-3">{refine.manuscriptsTitle}</h3>
+        <ul class="space-y-2">
+          {refine.manuscripts.map((item) => (
+            <li class="flex items-center gap-2 text-xs text-on-surface-variant hover:text-primary cursor-pointer transition-colors">
+              <span class="w-1 h-1 bg-primary"></span>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </aside>
+  </div>
+</BaseLayout>

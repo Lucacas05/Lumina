@@ -1,0 +1,91 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PixelButton from "@/components/PixelButton.astro";
+import { siteContent, images } from "@/data/site";
+import { ICONS } from "@/lib/icons";
+import { StudyTimer } from "@/islands/StudyTimer";
+
+const { study } = siteContent;
+---
+
+<BaseLayout title="Estudio" currentPath="/estudio">
+  <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <section class="lg:col-span-8 space-y-8">
+      <div class="relative aspect-video bg-surface-container-low pixel-border overflow-hidden shadow-2xl group">
+        <img
+          class="w-full h-full object-cover opacity-60 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-700"
+          src={images.studyRoomIso}
+          alt={study.roomAlt}
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+        <div class="absolute inset-0 dither-bg pointer-events-none opacity-40"></div>
+
+        <div class="absolute inset-0 flex items-center justify-center p-6">
+          <StudyTimer client:load labels={study.timer} />
+        </div>
+
+        <div class="absolute bottom-6 right-6 flex gap-2">
+          {study.avatars.map((user) => (
+            <div class:list={["w-10 h-10 border-2 border-surface-container-highest flex items-center justify-center pixel-shadow", user.color]} title={user.name}>
+              <ICONS.UserCircle className={user.textColor} size={20} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {study.ambience.map((ambient) => {
+          const Icon = ICONS[ambient.icon];
+          return (
+            <div class="bg-surface-container p-4 flex flex-col items-center gap-3 border-b-4 border-outline-variant hover:bg-surface-container-high transition-colors cursor-pointer group">
+              <div class="text-primary group-hover:scale-110 transition-transform">
+                <Icon size={32} />
+              </div>
+              <span class="font-headline text-xs font-bold uppercase tracking-widest text-on-surface-variant text-center">{ambient.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+
+    <aside class="lg:col-span-4 space-y-6">
+      <div class="bg-secondary-container p-[4px] shadow-2xl">
+        <div class="bg-surface-container-low p-6 h-full relative border-2 border-dashed border-on-secondary-container">
+          <h2 class="font-headline font-black text-xl text-primary mb-6 uppercase tracking-tighter flex items-center gap-2">
+            <ICONS.History size={20} />
+            {study.notesTitle}
+          </h2>
+          <div class="space-y-6">
+            {study.notes.map((entry) => (
+              <div class="relative pl-6 border-l-2 border-primary-container">
+                <div class="absolute -left-2 top-0 w-4 h-4 bg-primary rotate-45"></div>
+                <div class="font-headline text-[10px] text-tertiary font-bold uppercase tracking-widest mb-1">
+                  {entry.author} • {entry.time}
+                </div>
+                <p class="text-on-surface-variant text-sm font-medium leading-relaxed italic">{entry.content}</p>
+              </div>
+            ))}
+          </div>
+          <div class="mt-8 pt-6 border-t border-surface-variant">
+            <PixelButton variant="tertiary" fullWidth={true}>{study.notesCta}</PixelButton>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container p-6 border-l-4 border-tertiary">
+        <div class="flex justify-between items-end mb-4">
+          <span class="font-headline font-bold text-xs uppercase tracking-widest text-on-surface-variant">{study.progressLabel}</span>
+          <span class="font-headline font-black text-tertiary">{study.progressValue}</span>
+        </div>
+        <div class="h-6 bg-tertiary-container relative overflow-hidden">
+          <div class="h-full bg-primary w-[75%] transition-all duration-1000"></div>
+          <div class="absolute right-0 top-0 h-full flex items-center pr-2">
+            <ICONS.Flame className="text-on-primary animate-pulse" size={14} />
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</BaseLayout>
