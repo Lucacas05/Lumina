@@ -62,14 +62,10 @@ const { dashboard } = siteContent;
           class="md:col-span-8 bg-surface-container-high border-4 border-surface-container-highest p-1 group overflow-hidden text-left"
         >
           <div class="relative h-72 md:h-[28rem] bg-surface-dim overflow-hidden">
-            <img
-              src={images.silentWing}
-              class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-              style="object-position: center 46%;"
-              alt={dashboard.spaces.sharedLibrary.alt}
-              loading="eager"
-              fetchpriority="high"
-              decoding="async"
+            <div
+              class="absolute inset-0 bg-cover bg-no-repeat transition-transform duration-500 group-hover:scale-[1.03]"
+              style={`background-image: url(${images.silentWing}); background-position: center 46%;`}
+              aria-hidden="true"
             />
             <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,18,16,0.92)_0%,rgba(24,18,16,0.86)_28%,rgba(24,18,16,0.38)_56%,rgba(24,18,16,0.18)_100%)]"></div>
             <div class="absolute inset-0 bg-gradient-to-t from-black/72 via-transparent to-black/10"></div>
