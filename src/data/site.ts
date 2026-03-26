@@ -24,7 +24,7 @@ export const siteContent = {
       "Un santuario digital de estudio con identidad fantasy retro, biblioteca temática, sala de enfoque y crónicas inmersivas.",
   },
   profile: {
-    role: "Escriba mayor",
+    role: "Archivo local",
     libraryName: "La Gran Biblioteca",
   },
   navigation: {
@@ -46,7 +46,7 @@ export const siteContent = {
       {
         href: "/refinar",
         label: "Refinar",
-        shortLabel: "Sociedad",
+        shortLabel: "Avatar",
         icon: "Users",
         mobileIcon: "Users",
       },
@@ -62,7 +62,7 @@ export const siteContent = {
       { href: "/", label: "Biblioteca" },
       { href: "/cronicas", label: "Crónicas" },
     ],
-    quickAction: "Nueva entrada",
+    quickAction: "Refinar avatar",
     settings: "Ajustes",
     logout: "Salir",
   },

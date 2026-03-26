@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Digital Sanctuary | Character Artisan</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-tint": "#ffb961",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#304e2f",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#add0a8",
+                        "surface-bright": "#3f3835",
+                        "on-tertiary-container": "#98ba94",
+                        "on-primary-fixed": "#2b1700",
+                        "primary-fixed-dim": "#ffb961",
+                        "tertiary-fixed": "#c8ecc3",
+                        "on-primary": "#472a00",
+                        "tertiary-container": "#2d4b2d",
+                        "on-secondary": "#442a22",
+                        "surface-container-highest": "#3b3331",
+                        "on-background": "#ede0dc",
+                        "surface-variant": "#3b3331",
+                        "on-secondary-container": "#d4aca0",
+                        "secondary-container": "#5d4037",
+                        "on-secondary-fixed": "#2c160e",
+                        "primary-container": "#623c00",
+                        "on-surface": "#ede0dc",
+                        "on-primary-fixed-variant": "#663e00",
+                        "on-tertiary": "#19371b",
+                        "outline-variant": "#434841",
+                        "on-surface-variant": "#c3c8be",
+                        "surface-dim": "#181210",
+                        "inverse-surface": "#ede0dc",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#ffdbd0",
+                        "on-secondary-fixed-variant": "#5d4037",
+                        "surface-container": "#251e1c",
+                        "background": "#181210",
+                        "primary": "#ffb961",
+                        "surface-container-high": "#2f2826",
+                        "surface-container-lowest": "#130d0b",
+                        "surface": "#181210",
+                        "secondary-fixed-dim": "#e7bdb1",
+                        "secondary": "#e7bdb1",
+                        "inverse-primary": "#865300",
+                        "primary-fixed": "#ffddb8",
+                        "outline": "#8d9289",
+                        "on-tertiary-fixed": "#042108",
+                        "on-error": "#690005",
+                        "on-primary-container": "#eca241",
+                        "inverse-on-surface": "#362f2c",
+                        "tertiary": "#add0a8",
+                        "surface-container-low": "#201a18"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pixel-border {
+            box-shadow: 
+                0 -4px 0 0 #2d4b2d,
+                0 4px 0 0 #2d4b2d,
+                -4px 0 0 0 #2d4b2d,
+                4px 0 0 0 #2d4b2d;
+        }
+        .dithered-bg {
+            background-image: radial-gradient(#2d4b2d 1px, transparent 1px);
+            background-size: 4px 4px;
+        }
+        .steps-4 {
+            transition-timing-function: steps(4);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body select-none">
+<!-- TopAppBar -->
+<header class="bg-[#181210] dark:bg-[#181210] docked full-width top-0 z-50 border-b-4 border-[#2d4b2d] flex justify-between items-center w-full px-6 py-4 fixed">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-bold text-[#ffb961] dark:text-[#ffb961] tracking-tighter font-headline uppercase">The Digital Sanctuary</span>
+</div>
+<nav class="hidden md:flex gap-8">
+<a class="text-[#3b3331] font-['Space_Grotesk'] uppercase tracking-wider text-sm hover:bg-[#201a18] transition-all steps-4 px-2 py-1" href="#">Sanctuary</a>
+<a class="text-[#3b3331] font-['Space_Grotesk'] uppercase tracking-wider text-sm hover:bg-[#201a18] transition-all steps-4 px-2 py-1" href="#">Wardrobe</a>
+<a class="text-[#ffb961] border-b-2 border-[#ffb961] font-['Space_Grotesk'] uppercase tracking-wider text-sm px-2 py-1" href="#">Library</a>
+</nav>
+<div class="flex items-center gap-4 text-[#ffb961]">
+<button class="material-symbols-outlined hover:bg-[#201a18] p-2 steps-4">settings</button>
+<button class="material-symbols-outlined hover:bg-[#201a18] p-2 steps-4">help</button>
+<div class="w-8 h-8 bg-primary-container border-2 border-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="close-up pixel art portrait of a bearded scholar in a hood with glowing amber eyes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFyjCqkGaWBKfJhtm21T8aAZhS2lmYYakRgQpOcWmDdo6fXqORmY8B_Qhki394LqR9f2yZ_3SEBPXiKPopKH-wmZHSmtXN4PKx0lK3Q8qsGYjWd0NgM7g_Qg9wP-bqXeyxipBSevqCO_mbq28GhAIIXSnqYV_dCEgDLul7t7fycex9qy8k7u0YVArf585vLXTrQEblMdSllheGidnTjnwKvTJ11t3SYHHl8dFDcr3AsGaGIOy-GfYcGr0SKI21dregq8e-j9jSKK4"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 bg-[#201a18] border-r-4 border-[#2d4b2d] shadow-[4px_0_0_0_rgba(0,0,0,0.2)] flex flex-col pt-24 pb-6 hidden md:flex">
+<div class="px-6 mb-8">
+<h2 class="text-[#ffb961] font-black font-headline text-xl">The Artisan</h2>
+<p class="text-[#3b3331] font-bold text-xs uppercase tracking-widest">Character Creator</p>
+</div>
+<nav class="flex-1">
+<div class="bg-[#2d4b2d] text-[#ffb961] border-l-4 border-[#ffb961] flex items-center px-6 py-3 mb-2 font-headline font-bold text-lg cursor-pointer transition-colors steps-4">
+<span class="material-symbols-outlined mr-4">scuba_diving</span>
+                Headwear
+            </div>
+<div class="text-[#3b3331] flex items-center px-6 py-3 mb-2 font-headline font-bold text-lg cursor-pointer hover:bg-[#3b3331] hover:text-[#ffb961] transition-colors steps-4">
+<span class="material-symbols-outlined mr-4">visibility</span>
+                Eyewear
+            </div>
+<div class="text-[#3b3331] flex items-center px-6 py-3 mb-2 font-headline font-bold text-lg cursor-pointer hover:bg-[#3b3331] hover:text-[#ffb961] transition-colors steps-4">
+<span class="material-symbols-outlined mr-4">checkroom</span>
+                Upper Garments
+            </div>
+<div class="text-[#3b3331] flex items-center px-6 py-3 mb-2 font-headline font-bold text-lg cursor-pointer hover:bg-[#3b3331] hover:text-[#ffb961] transition-colors steps-4">
+<span class="material-symbols-outlined mr-4">wc</span>
+                Lower Garments
+            </div>
+<div class="text-[#3b3331] flex items-center px-6 py-3 mb-2 font-headline font-bold text-lg cursor-pointer hover:bg-[#3b3331] hover:text-[#ffb961] transition-colors steps-4">
+<span class="material-symbols-outlined mr-4">auto_stories</span>
+                Artifacts
+            </div>
+</nav>
+<div class="px-6 mt-auto">
+<div class="bg-surface-container-lowest p-4 border-2 border-tertiary-container">
+<p class="text-[10px] text-tertiary uppercase font-bold mb-2">Soul Essence</p>
+<div class="h-2 w-full bg-tertiary-container relative">
+<div class="h-full bg-primary w-[75%]"></div>
+<span class="material-symbols-outlined absolute -right-1 -top-2 text-primary text-sm" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-0 md:ml-64 pt-24 pb-20 md:pb-8 px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-2rem)] overflow-hidden">
+<!-- Character Preview Area -->
+<section class="lg:col-span-7 flex flex-col items-center justify-center relative">
+<div class="relative w-full max-w-lg aspect-square bg-surface-container-low p-8 pixel-border group">
+<!-- Inner Decorative Frame -->
+<div class="absolute inset-4 border border-tertiary/20 dithered-bg opacity-30"></div>
+<!-- The Main Sprite -->
+<div class="relative w-full h-full flex items-center justify-center bg-surface-container-lowest overflow-hidden">
+<img class="w-4/5 h-4/5 object-contain image-pixelated" data-alt="full body 16-bit pixel art of a wizard scholar in ornate green robes and a pointed hat standing in a mysterious forest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB40f1WVeak1dqxE4Gh4rd4Q2-57N93NINgaBe-pJL99_zKGwOJTD1Ml-9F6eR6ui3TREZh84vT6HikcgrcvAUcrL6BBCnrBvY128Mgf2JVw84cDWgau86cpe8UErKmdgnCuIKsp8p_2rq6nZdXq5hJRnZ5ivB5LMd6VFxbjLXj4iiXhZyk9Sx3ozt8qEEDglwJwYYxObEqoD6raSVw9Eu2OPKPn5fMdISlRhsrZXKM74-h3ceC1Fd8fLHNN5u6N7hpvMD1VsBSSnE"/>
+<!-- Atmospheric Lighting Overlay -->
+<div class="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent pointer-events-none"></div>
+</div>
+<!-- Label Plate -->
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-secondary-fixed px-6 py-1 border-2 border-on-secondary-fixed-variant shadow-sm">
+<span class="font-headline font-bold text-on-secondary-fixed text-sm uppercase tracking-[0.2em]">The Arch-Scholar</span>
+</div>
+</div>
+<!-- Action Bar -->
+<div class="mt-8 flex gap-4">
+<button class="bg-primary text-on-primary px-8 py-3 font-headline font-bold uppercase tracking-widest border-b-4 border-on-primary-fixed-variant active:translate-y-1 transition-all steps-4">
+                    Commence Rite
+                </button>
+<button class="bg-tertiary-container text-on-tertiary-container px-6 py-3 font-headline font-bold uppercase tracking-widest active:translate-y-1 transition-all steps-4">
+                    Reset Form
+                </button>
+</div>
+</section>
+<!-- Customization Side Panel -->
+<section class="lg:col-span-5 flex flex-col h-full overflow-hidden bg-surface-container p-6 border-l-4 border-tertiary-container">
+<div class="flex justify-between items-end mb-6">
+<div>
+<h3 class="font-headline text-2xl font-bold text-primary">Library Archive</h3>
+<p class="text-xs text-on-surface-variant font-medium">Select your ceremonial vestments</p>
+</div>
+<div class="text-right">
+<span class="block text-[10px] text-outline uppercase font-black">Slot Complexity</span>
+<span class="font-headline font-bold text-tertiary">Tier III</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto pr-2 space-y-8 custom-scrollbar">
+<!-- Category Section -->
+<div class="space-y-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary"></span>
+<h4 class="font-headline font-bold text-sm uppercase tracking-wider">Headwear</h4>
+</div>
+<div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 gap-3">
+<!-- Items -->
+<div class="aspect-square bg-surface-container-lowest border-2 border-primary cursor-pointer p-1 relative">
+<img class="w-full h-full object-cover" data-alt="pixel art icon of a pointed wizard hat with golden trim" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoXS3YmLE66Em9sZTf1qyMyHQfzPI1Xj8Ve_uKfxtmZC3ukf9np-_0RiUR6P1Gn85ESsyGT-LmWC2qrS86ncrMr8MoYFxJ6MqH9HrxC4OEi2u-45kgqCiAZlFhE54zjsB0dQgWaEgd0fDxjmwG3FjN9kAMFjbCo8RJ8F7m7INksHOEIhl1tdQ4KlM_CJbFo8tNMD2pidwdLRnX0ar1Uco4ex3YbpLahO8wLo0Urd53bi1fj2AiIzIrhrSD2cYIvp5NXD29hFrcpjY"/>
+<div class="absolute top-0 right-0 w-2 h-2 bg-primary"></div>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant cursor-pointer p-1">
+<img class="w-full h-full object-cover grayscale opacity-60" data-alt="pixel art icon of a scholar's hood made of rough linen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClPDaXlXuPeCNXMmKRuGj0UeOyT508EgaZFKybs-SITWkormkcBeKadxfbve5czFcjNsBPFo57Ga0Z025eeC-aq080i7RLqEgZ9OOkxz9xkdu8_BQIcndr4KkkcqOuTQBOsb6pHV9Ta8bmntOZFVOYqIvPvDREOAi711uplM67ZuXYZoq8mxYWhFlpKuvoBjfJbMfboNuzF1qxoo_a0gFdgdePCJJ8gZlqc2Ssx3uGYtZtI_S1EJ8kiOg_wUpVagFNtxOiZwrJp6o"/>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant cursor-pointer p-1">
+<div class="w-full h-full bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-outline-variant text-sm">lock</span>
+</div>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant cursor-pointer p-1">
+<div class="w-full h-full bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-outline-variant text-sm">lock</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Category Section -->
+<div class="space-y-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary"></span>
+<h4 class="font-headline font-bold text-sm uppercase tracking-wider">Upper Garments</h4>
+</div>
+<div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 gap-3">
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-primary cursor-pointer p-1">
+<img class="w-full h-full object-cover" data-alt="pixel art icon of flowing scholar robes with green embroidery" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPJMZAm5VDHtQF0od6KwCuB75WROXq0fUfmbKOuSGQJ0EHOfFjvb4Lr0609YNrrjUWcP7B49HUn0qTAUygDsTJKHPLnhAdp1k-egcEJ5k0l2qtAVgUwjT_4FEouLHoEbxsiVbneZDrlw1H6F8FZHMpAIgWqu1VKWrnksqxQpUwQguGBmJEFIuMN911BHHt88og1nnF5ZYsSKAKhJewlR2zLVwClWh170UEAUOn97VqcRhoUlz4udQPFAgFJLSTcdpAQ5O_FHtmZe4"/>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-primary cursor-pointer p-1 relative">
+<img class="w-full h-full object-cover" data-alt="pixel art icon of heavy ceremonial wizard robes with leather straps" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBm-yCei37mV3LXndHtnjH-Ta_kOKqir8UD81_VHPQNRCmtdvw4GmkguLv6swKHd3Bw7ASTN8HEYg4_Mk-_8gSsKkjnv7Ic6PWA91EDFZQoEFHPQhqf5ArAjl0nt3SchAJ8g0UIg_PT4io_uLjt0S6My_VOyiZktk-0J-lVkgMK9fTEJ3yXPXYUDdH6nx6QlsdZEqkt4fYBkTN_dld7Stp29iAwCospQMWSzi8tlNWswCpIgQUuqWglag5f7ydmxBYtbQJnLXuMWe4"/>
+<div class="absolute top-0 right-0 w-2 h-2 bg-primary"></div>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant cursor-pointer p-1">
+<img class="w-full h-full object-cover grayscale opacity-60" data-alt="pixel art icon of a simple cloth tunic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2B_7n8NdvWryMemQxIQOVM-m529a4lg9uKcStYmwzJmFb67UhZo3oN5wh8MdXVNpNdRB7KfXlAAYQBrMhy0WjZaihbwlXIhnghwEjN0luKRXufkE1alJg3gxcPxJY7rAWjBqsOaTAGX7sWr6XCNk-wjpFxylZv2VKRslRaG-PRS_FCn1V1FGhj_JOUelf12OtGXYEWLsc1GeRqKq7Acqhe7YkPTO9zWaUwuJ3NwCAxF1o5SbS8RmzzuDFvBdEGViC-CZVgArYJaU"/>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant cursor-pointer p-1">
+<div class="w-full h-full bg-surface-container-high"></div>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant cursor-pointer p-1">
+<div class="w-full h-full bg-surface-container-high"></div>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-outline-variant cursor-pointer p-1">
+<div class="w-full h-full bg-surface-container-high"></div>
+</div>
+</div>
+</div>
+<!-- Category Section -->
+<div class="space-y-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary"></span>
+<h4 class="font-headline font-bold text-sm uppercase tracking-wider">Artifacts</h4>
+</div>
+<div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 gap-3">
+<div class="aspect-square bg-surface-container-lowest border-2 border-primary cursor-pointer p-1 relative">
+<img class="w-full h-full object-cover" data-alt="pixel art icon of an ancient leather bound spellbook with glowing runes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQMqr0XB5qTxUzsEEWQNMArkOQ8NQ7zouCsY-hbe7Pyj4UwZDDrLDDSo5TZeW9kPGCBjSKHhFH92WEXwrdhGmhQCRrHUrv6sLa_Wa0YK4-zhVkZHrf6pMR3Kv8iYyc-9J4vNxwi7QjBxk48fnQBH686I0n7X7kVrGljz92q3fiIDQHD_0CPbob3_d1f5p6gpQHV0zYCFQv4n1l_cU-VJs67eYfSs2PbOPUa1bTOZnIPYwOy0triv2KVWyNldA354724iBDYNyOIWs"/>
+<div class="absolute top-0 right-0 w-2 h-2 bg-primary"></div>
+</div>
+<div class="aspect-square bg-surface-container-lowest border-2 border-transparent hover:border-primary cursor-pointer p-1">
+<img class="w-full h-full object-cover" data-alt="pixel art icon of a wooden staff with a floating crystal" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfAoUxn67n1Rfy3H4brjBteFzSWEfmDa63jfY_G8ZAAT_dVfZ8Q0hwVGdSYVf8XdoFsOZsPfxemgx4RK6m0HWFw4IOezlIoV6enCNfCO-l0EByRKjJtWmd74c5nTl6MZwPu1R4RvQd9TlFBojNqoxRQKlh1kQWY2Us63sxyQcrbfPDYE7urqXmptX5b-WXxE-om6Ygl437AYrCFNG0wqZf8WEno7DItND74Ac155sCiN4KE7BDx3FWk4k9fEuB-8fQkBHOQoEU89E"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<footer class="md:hidden fixed bottom-0 w-full z-50 bg-[#181210] border-t-4 border-[#2d4b2d] flex justify-around items-center">
+<button class="flex flex-col items-center justify-center text-[#3b3331] py-2 w-full hover:bg-[#201a18] transition-all active:translate-y-0.5">
+<span class="material-symbols-outlined">castle</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">Sanctuary</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-[#2d4b2d] text-[#ffb961] py-2 w-full hover:bg-[#201a18] transition-all active:translate-y-0.5">
+<span class="material-symbols-outlined">styler</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">Wardrobe</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#3b3331] py-2 w-full hover:bg-[#201a18] transition-all active:translate-y-0.5">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-bold uppercase">Library</span>
+</button>
+</footer>
+</body></html>

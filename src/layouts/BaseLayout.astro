@@ -2,8 +2,8 @@
 import "@/index.css";
 import PixelButton from "@/components/PixelButton.astro";
 import Sidebar from "@/components/Sidebar.astro";
-import { ICONS } from "@/lib/icons";
 import { siteContent } from "@/data/site";
+import { IdentityBadge } from "@/islands/sanctuary/IdentityBadge";
 
 interface Props {
   title: string;
@@ -52,18 +52,11 @@ const isActive = (href: string) => (href === "/" ? currentPath === "/" : current
               </a>
             ))}
           </nav>
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-surface-container-highest border-2 border-outline-variant flex items-center justify-center overflow-hidden">
-              <ICONS.UserCircle className="text-primary" size={24} />
-            </div>
-            <span class="hidden sm:inline font-headline font-bold text-xs uppercase tracking-widest text-primary">
-              {siteContent.profile.role}
-            </span>
-          </div>
+          <IdentityBadge client:only="react" />
         </div>
       </header>
 
-      <main class="p-4 md:p-8 pb-24 md:pb-8 flex-1">
+      <main class="flex-1 px-4 pb-24 pt-8 md:px-8 md:pb-10 md:pt-12 xl:pt-14">
         <slot />
       </main>
     </div>

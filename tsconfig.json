@@ -8,5 +8,12 @@
         "src/*"
       ]
     }
-  }
+  },
+  "exclude": [
+    "dist",
+    "img",
+    "output",
+    "references",
+    ".playwright-cli"
+  ]
 }

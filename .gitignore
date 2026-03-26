@@ -3,3 +3,5 @@ dist/
 .astro/
 .playwright-cli/
 .vscode/
+output/
+progress.md

@@ -4,6 +4,8 @@ import PixelCard from "@/components/PixelCard.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteContent, images } from "@/data/site";
 import { ICONS } from "@/lib/icons";
+import { CurrentPulsePanel } from "@/islands/sanctuary/CurrentPulsePanel";
+import { HubSocialSpaces } from "@/islands/sanctuary/HubSocialSpaces";
 
 const { dashboard } = siteContent;
 ---
@@ -56,58 +58,8 @@ const { dashboard } = siteContent;
         </a>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        <a
-          href={dashboard.spaces.sharedLibrary.href}
-          class="md:col-span-8 self-start bg-surface-container-high border-4 border-surface-container-highest p-1 group overflow-hidden text-left"
-        >
-          <div class="relative h-72 md:h-[28rem] bg-surface-dim overflow-hidden">
-            <div
-              class="absolute inset-0 bg-cover bg-no-repeat transition-transform duration-500 group-hover:scale-[1.03]"
-              style={`background-image: url(${images.silentWing}); background-position: center 46%;`}
-              aria-hidden="true"
-            />
-            <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,18,16,0.92)_0%,rgba(24,18,16,0.86)_28%,rgba(24,18,16,0.38)_56%,rgba(24,18,16,0.18)_100%)]"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/72 via-transparent to-black/10"></div>
-            <div class="absolute top-4 left-4 bg-tertiary px-3 py-1 font-headline font-bold text-on-tertiary text-xs uppercase tracking-tighter">
-              {dashboard.spaces.sharedLibrary.badge}
-            </div>
-            <div class="absolute inset-0 flex flex-col justify-end p-6 md:max-w-[48%]">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                <span class="text-primary text-xs font-bold uppercase tracking-widest">{dashboard.spaces.sharedLibrary.status}</span>
-              </div>
-              <h3 class="text-2xl font-headline font-black text-white uppercase tracking-tighter">
-                {dashboard.spaces.sharedLibrary.title}
-              </h3>
-              <p class="text-on-surface-variant text-sm font-body mt-2 max-w-lg">
-                {dashboard.spaces.sharedLibrary.description}
-              </p>
-            </div>
-          </div>
-        </a>
-
-        <a
-          href={dashboard.spaces.garden.href}
-          class="md:col-span-4 bg-surface-container-high border-4 border-surface-container-highest p-1 group overflow-hidden text-left"
-        >
-          <div class="relative h-full min-h-[250px] bg-surface-dim overflow-hidden">
-            <img
-              src={images.gardenTerrace}
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              alt={dashboard.spaces.garden.alt}
-              loading="lazy"
-              decoding="async"
-            />
-            <div class="absolute top-4 left-4 bg-primary px-3 py-1 font-headline font-bold text-on-primary text-xs uppercase tracking-tighter">
-              {dashboard.spaces.garden.badge}
-            </div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-6">
-              <h3 class="text-xl font-headline font-black text-white uppercase tracking-tighter">{dashboard.spaces.garden.title}</h3>
-              <p class="text-on-surface-variant text-xs font-body mt-2">{dashboard.spaces.garden.description}</p>
-            </div>
-          </div>
-        </a>
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <HubSocialSpaces client:only="react" />
 
         {dashboard.spaces.secondaryLinks.map((item) => {
           const Icon = ICONS[item.icon];
@@ -158,29 +110,7 @@ const { dashboard } = siteContent;
     </section>
 
     <section id="pulso-personal">
-      <div class="bg-surface-container-highest border-t-8 border-primary-container p-8 relative pixel-border">
-        <div class="flex flex-col md:flex-row gap-8 items-center">
-          <div class="w-48 h-48 bg-surface border-4 border-surface-container-highest pixel-border-inset flex items-center justify-center relative group">
-            <img src={images.ancientBook} class="w-32 h-32 object-contain" alt={dashboard.currentFocus.alt} loading="lazy" decoding="async" />
-            <div class="absolute -bottom-4 bg-primary text-on-primary font-headline font-bold text-[10px] px-3 py-1 uppercase tracking-widest bezel-button">
-              {dashboard.currentFocus.level}
-            </div>
-          </div>
-          <div class="flex-1 text-center md:text-left">
-            <h2 class="text-3xl font-headline font-black text-tertiary uppercase tracking-tighter mb-3">{dashboard.currentFocus.title}</h2>
-            <h3 class="text-4xl font-headline font-black text-on-surface uppercase tracking-tighter mb-2">{dashboard.currentFocus.bookTitle}</h3>
-            <p class="text-outline font-headline font-bold text-sm tracking-widest uppercase mb-4">{dashboard.currentFocus.progress}</p>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-              {dashboard.currentFocus.stats.map((stat) => (
-                <div class:list={["bg-surface-container-low p-4 border-b-4", stat.color]}>
-                  <p class="text-[10px] font-headline font-bold text-outline uppercase tracking-widest">{stat.label}</p>
-                  <p class:list={["text-2xl font-headline font-black", stat.textColor]}>{stat.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <CurrentPulsePanel client:only="react" />
     </section>
   </div>
 </BaseLayout>

@@ -1,72 +1,195 @@
-import { useEffect, useState } from "react";
-import { Pause, Play, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Pause, Play, RotateCcw, Sparkles } from "lucide-react";
+import {
+  getCurrentTimer,
+  sanctuaryActions,
+  type RoomKind,
+  useSanctuaryStore,
+} from "@/lib/sanctuary/store";
 
 interface StudyTimerProps {
-  initialMinutes?: number;
-  labels: {
-    namePlate?: string;
-    start: string;
-    pause: string;
-    reset: string;
-  };
+  roomKind: RoomKind;
+  roomCode: string;
+  roomName: string;
+  showGardenHint?: boolean;
 }
 
-export function StudyTimer({ initialMinutes = 25, labels }: StudyTimerProps) {
-  const initialSeconds = initialMinutes * 60;
-  const [timeLeft, setTimeLeft] = useState(initialSeconds);
-  const [isActive, setIsActive] = useState(false);
+function formatTime(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+export function StudyTimer({ roomKind, roomCode, roomName, showGardenHint = false }: StudyTimerProps) {
+  const sanctuary = useSanctuaryStore();
+  const [now, setNow] = useState(Date.now());
+  const [focusMinutes, setFocusMinutes] = useState("25");
+  const [breakMinutes, setBreakMinutes] = useState("5");
 
   useEffect(() => {
-    if (!isActive || timeLeft <= 0) {
-      if (timeLeft <= 0) {
-        setIsActive(false);
-      }
-      return;
-    }
-
+    sanctuaryActions.syncTimer();
     const interval = window.setInterval(() => {
-      setTimeLeft((current) => current - 1);
+      setNow(Date.now());
+      sanctuaryActions.syncTimer();
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [isActive, timeLeft]);
+  }, []);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const timer = useMemo(() => getCurrentTimer(sanctuary, now), [sanctuary, now]);
+  const boundToCurrentRoom = timer.roomKind === roomKind && timer.roomCode === roomCode;
+  const isGuestBlocked = sanctuary.authMode === "guest" && roomKind !== "solo";
+  const canEditDurations = !isGuestBlocked && timer.status !== "running";
+  const phaseLabel = timer.phase === "break" ? "Descanso activo" : "Foco en curso";
+  const hint =
+    isGuestBlocked
+      ? "El acceso a espacios compartidos llegará con el inicio de sesión."
+      : boundToCurrentRoom
+        ? roomKind === "solo"
+          ? "Este reloj alimenta tus sesiones privadas."
+          : "Este reloj actualiza tu estado visible para el resto."
+        : `Tu reloj está vinculado a ${timer.roomLabel}.`;
+
+  useEffect(() => {
+    setFocusMinutes(String(Math.round(timer.focusDurationSeconds / 60)));
+    setBreakMinutes(String(Math.round(timer.breakDurationSeconds / 60)));
+  }, [timer.focusDurationSeconds, timer.breakDurationSeconds]);
+
+  const handleStart = () => {
+    if (isGuestBlocked) {
+      return;
+    }
+
+    if (!boundToCurrentRoom && timer.status !== "idle") {
+      sanctuaryActions.resetTimer(roomKind, roomCode);
+    }
+
+    sanctuaryActions.startTimer(roomKind, roomCode);
+  };
+
+  const handleReset = () => {
+    sanctuaryActions.resetTimer(roomKind, roomCode);
+  };
+
+  const handleApplyDurations = () => {
+    sanctuaryActions.updateTimerDurations(Number(focusMinutes), Number(breakMinutes));
   };
 
   return (
-    <div className="bg-surface-container-high pixel-border p-1 shadow-2xl max-w-sm w-full relative">
-      <div className="absolute -top-4 left-4 bg-secondary-container text-primary-fixed px-3 py-1 font-headline font-bold text-xs uppercase tracking-tighter z-10">
-        {labels.namePlate ?? "Foco profundo"}
+    <div className="relative w-full max-w-none bg-surface-container-high pixel-border p-1 shadow-2xl">
+      <div className="absolute -top-4 left-4 bg-secondary-container px-3 py-1 font-headline text-xs font-bold uppercase tracking-widest text-primary-fixed">
+        Reloj de sala
       </div>
-      <div className="bg-surface-container-highest p-6 flex flex-col items-center gap-2">
-        <div className="font-headline text-7xl md:text-8xl font-black text-primary tracking-widest antialiased drop-shadow-[4px_4px_0px_#472a00]">
-          {formatTime(timeLeft)}
+      <div className="bg-surface-container-highest p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">{roomName}</p>
+            <h3 className="font-headline text-2xl font-black uppercase tracking-tighter text-primary">
+              {boundToCurrentRoom ? phaseLabel : "Reloj preparado"}
+            </h3>
+          </div>
+          <div className="rounded-none border-2 border-outline-variant bg-surface-container px-3 py-2 text-right">
+            <p className="font-headline text-[10px] font-bold uppercase tracking-[0.2em] text-outline">Estado</p>
+            <p className="font-headline text-xs font-black uppercase tracking-widest text-tertiary">
+              {timer.status === "running" ? "Activo" : timer.status === "paused" ? "Pausado" : "Listo"}
+            </p>
+          </div>
         </div>
-        <div className="flex gap-4 mt-4">
+
+        <div className="font-headline text-center text-[clamp(3.75rem,9vw,5.5rem)] leading-none font-black tracking-[0.04em] text-primary drop-shadow-[4px_4px_0px_#472a00]">
+          {formatTime(boundToCurrentRoom ? timer.remainingSeconds : timer.durationSeconds)}
+        </div>
+
+        <p className="mt-4 text-center text-sm leading-relaxed text-on-surface-variant">{hint}</p>
+
+        <div className="mt-6 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+          <label className="block">
+            <span className="mb-2 block font-headline text-[10px] font-bold uppercase tracking-[0.22em] text-outline">
+              Foco
+            </span>
+            <div className="flex items-center border-2 border-outline-variant bg-surface-container-low px-3">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min={5}
+                max={180}
+                step={1}
+                value={focusMinutes}
+                onChange={(event) => setFocusMinutes(event.target.value)}
+                disabled={!canEditDurations}
+                className="w-full bg-transparent py-3 text-center font-headline text-lg font-black text-on-surface outline-none disabled:cursor-not-allowed"
+              />
+              <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-outline">min</span>
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block font-headline text-[10px] font-bold uppercase tracking-[0.22em] text-outline">
+              Descanso
+            </span>
+            <div className="flex items-center border-2 border-outline-variant bg-surface-container-low px-3">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min={1}
+                max={60}
+                step={1}
+                value={breakMinutes}
+                onChange={(event) => setBreakMinutes(event.target.value)}
+                disabled={!canEditDurations}
+                className="w-full bg-transparent py-3 text-center font-headline text-lg font-black text-on-surface outline-none disabled:cursor-not-allowed"
+              />
+              <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-outline">min</span>
+            </div>
+          </label>
+
           <button
             type="button"
-            onClick={() => setIsActive((current) => !current)}
-            className="bg-primary text-on-primary border-b-[3px] border-on-primary-fixed-variant px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest inline-flex items-center justify-center gap-2 steps-bezel hover:brightness-105"
+            onClick={handleApplyDurations}
+            disabled={!canEditDurations}
+            className="inline-flex items-center justify-center gap-2 self-end border-2 border-outline-variant bg-surface-container-low px-5 py-3 font-headline text-xs font-bold uppercase tracking-widest text-on-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isActive ? <Pause size={16} /> : <Play size={16} />}
-            {isActive ? labels.pause : labels.start}
+            Guardar
+          </button>
+        </div>
+
+        {!canEditDurations && (
+          <p className="mt-3 text-center text-[11px] uppercase tracking-[0.18em] text-outline">
+            Pausa o reinicia el reloj para cambiar los tiempos.
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap justify-center gap-4">
+          <button
+            type="button"
+            onClick={timer.status === "running" && boundToCurrentRoom ? sanctuaryActions.pauseTimer : handleStart}
+            disabled={isGuestBlocked}
+            className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-6 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {timer.status === "running" && boundToCurrentRoom ? <Pause size={16} /> : <Play size={16} />}
+            {timer.status === "running" && boundToCurrentRoom ? "Pausar" : boundToCurrentRoom && timer.status === "paused" ? "Reanudar" : "Iniciar"}
           </button>
           <button
             type="button"
-            onClick={() => {
-              setTimeLeft(initialSeconds);
-              setIsActive(false);
-            }}
-            className="bg-tertiary text-on-tertiary border-b-[3px] border-on-tertiary-fixed-variant px-6 py-2 text-xs font-headline font-bold uppercase tracking-widest inline-flex items-center justify-center gap-2 steps-bezel hover:brightness-105"
+            onClick={handleReset}
+            className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-tertiary-fixed-variant bg-tertiary px-6 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-tertiary"
           >
             <RotateCcw size={16} />
-            {labels.reset}
+            Reiniciar
           </button>
         </div>
+
+        {showGardenHint && boundToCurrentRoom && timer.phase === "break" && (
+          <a
+            href="/jardin"
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 border-2 border-primary/35 bg-surface-container-low px-4 py-3 font-headline text-xs font-bold uppercase tracking-[0.22em] text-primary"
+          >
+            <Sparkles size={16} />
+            Ir al jardín de descanso
+          </a>
+        )}
       </div>
     </div>
   );

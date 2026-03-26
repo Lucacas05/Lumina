@@ -4,18 +4,18 @@
   <img width="1200" height="475" alt="Scholar's Sanctuary banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-Scholar's Sanctuary is a fantasy-styled study dashboard built with Astro, Tailwind CSS v4, and a small React island for the Pomodoro timer. The interface combines a retro RPG presentation with focused study tools such as a themed library dashboard, a study room with a Pomodoro timer, and a character-style refinement screen.
+Scholar's Sanctuary is a fantasy-styled study product built with Astro, Tailwind CSS v4, and React islands for the interactive parts. The current direction is a social study sanctuary: a hub in the library, a private silent room, a shared library, a garden for breaks, a character editor, and chronicles that grow from real Pomodoro sessions.
 
-The current version ships the interface in Spanish while preserving the original visual identity and brand name.
+The project currently ships its interface in Spanish while preserving the original visual identity and the `Scholar's Sanctuary` brand.
 
 ## Highlights
 
-- Biblioteca with chamber cards, progress panels, and hero imagery
-- Sala de estudio with a 25-minute focus timer and ambient controls
-- Pantalla de refinamiento with outfits, artifacts, and lore panels
-- Crónicas with timeline, cadence, milestones, and archive-style metrics
-- Responsive layout with sidebar navigation for desktop and mobile
-- Real routes with Astro and client-side hydration only where interactivity is needed
+- Biblioteca as a portal toward the sanctuary spaces
+- Santuario silencioso with an editable Pomodoro timer
+- Biblioteca compartida and jardin backed by local sanctuary state
+- Refinar with a modular avatar editor
+- Cronicas e hitos driven by real Pomodoro sessions stored in the browser
+- Responsive Astro routes with client-only React islands where state is needed
 
 ## Tech Stack
 
@@ -59,6 +59,8 @@ The current version ships the interface in Spanish while preserving the original
 ## Project Structure
 
 ```text
+docs/         Workflow and integration notes for the repo
+references/   Local design references that should not become Astro routes
 src/
   components/   Reusable Astro UI building blocks
   data/         Centralized Spanish content and asset references
@@ -67,6 +69,16 @@ src/
   pages/        Astro routes
   lib/          Shared runtime helpers such as icon mapping
 ```
+
+## Integration Guardrails
+
+- `faby` is the working branch for product evolution.
+- The Astro route structure is the baseline and must stay intact.
+- Spanish is the source language for visible UI copy, except for the brand name.
+- Future changes from `main` should be reviewed and ported selectively instead of merged blindly.
+- Visual references should live outside `src/pages` so Astro does not publish them as routes.
+
+See [`docs/faby-integration-workflow.md`](docs/faby-integration-workflow.md) for the sync workflow.
 
 ## AI Studio
 
