@@ -18,7 +18,7 @@ export const images = {
 } as const;
 
 export const siteContent = {
-  brand: "Scholar's Sanctuary",
+  brand: "Lumina",
   meta: {
     description:
       "Un santuario digital de estudio con identidad fantasy retro, biblioteca temática, sala de enfoque y crónicas inmersivas.",

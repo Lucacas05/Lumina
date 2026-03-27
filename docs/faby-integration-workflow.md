@@ -39,6 +39,6 @@ Los cambios nuevos de `main` no se mezclan a ciegas. Se revisan y se portan de f
 ## Guardrails
 
 - No volver a la SPA anterior.
-- No reintroducir copy principal en ingles salvo la marca `Scholar's Sanctuary`.
+- No reintroducir copy principal en ingles salvo la marca `Lumina`.
 - No publicar archivos de referencia visual dentro de `src/pages`.
 - Las islas nuevas deben integrarse dentro de shells Astro, no sustituirlos.

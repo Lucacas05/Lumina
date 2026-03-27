@@ -1,12 +1,12 @@
-# Scholar's Sanctuary
+# Lumina
 
 <div align="center">
-  <img width="1200" height="475" alt="Scholar's Sanctuary banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <img width="1200" height="475" alt="Lumina banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-Scholar's Sanctuary is a fantasy-styled study product built with Astro, Tailwind CSS v4, and React islands for the interactive parts. The current direction is a social study sanctuary: a hub in the library, a private silent room, a shared library, a garden for breaks, a character editor, and chronicles that grow from real Pomodoro sessions.
+Lumina is a fantasy-styled study product built with Astro, Tailwind CSS v4, and React islands for the interactive parts. The current direction is a social study sanctuary: a hub in the library, a private silent room, a shared library, a garden for breaks, a character editor, and chronicles that grow from real Pomodoro sessions.
 
-The project currently ships its interface in Spanish while preserving the original visual identity and the `Scholar's Sanctuary` brand.
+The project currently ships its interface in Spanish while preserving the original visual identity and the `Lumina` brand.
 
 ## Highlights
 
