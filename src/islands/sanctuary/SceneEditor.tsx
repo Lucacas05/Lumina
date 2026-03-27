@@ -16,7 +16,9 @@ declare global {
 
 const STORAGE_KEY = "scholars-sanctuary-scene-editor-v1";
 const ATLAS_VIEW_STORAGE_KEY = "scholars-sanctuary-scene-editor-atlas-view-v1";
+const ATLAS_PREVIEW_ZOOM_STORAGE_KEY = "scholars-sanctuary-scene-editor-atlas-preview-zoom-v1";
 const TILE_SNAP = 2;
+const MIN_ATLAS_PREVIEW_ZOOM = 0.1;
 const MIN_PROP_SCALE = 0.05;
 const MIN_PROP_SIZE = 4;
 
@@ -391,6 +393,23 @@ function loadAtlasViewPositions() {
   }
 }
 
+function loadAtlasPreviewZooms() {
+  if (typeof window === "undefined") {
+    return {} as Record<string, number>;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(ATLAS_PREVIEW_ZOOM_STORAGE_KEY);
+    if (!raw) {
+      return {} as Record<string, number>;
+    }
+    const parsed = JSON.parse(raw) as Record<string, number>;
+    return parsed ?? {};
+  } catch {
+    return {} as Record<string, number>;
+  }
+}
+
 function findProp(scene: SceneMap, id: string) {
   return scene.props.find((prop) => prop.id === id) ?? null;
 }
@@ -605,6 +624,7 @@ function AtlasSourcePreview({
   atlasImage,
   viewportOrigin,
   onViewportChange,
+  zoom = 1,
   width = 220,
   height = 136,
 }: {
@@ -612,6 +632,7 @@ function AtlasSourcePreview({
   atlasImage: HTMLImageElement | null;
   viewportOrigin?: AtlasViewportOrigin | null;
   onViewportChange?: (next: AtlasViewportOrigin) => void;
+  zoom?: number;
   width?: number;
   height?: number;
 }) {
@@ -661,8 +682,11 @@ function AtlasSourcePreview({
     }
 
     const margin = 16;
-    const viewportW = Math.max(24, Math.min(atlasImage.width, source.w + margin * 2));
-    const viewportH = Math.max(24, Math.min(atlasImage.height, source.h + margin * 2));
+    const safeZoom = clamp(zoom, MIN_ATLAS_PREVIEW_ZOOM, 6);
+    const baseViewportW = source.w + margin * 2;
+    const baseViewportH = source.h + margin * 2;
+    const viewportW = Math.max(source.w + 8, Math.min(atlasImage.width, Math.round(baseViewportW / safeZoom)));
+    const viewportH = Math.max(source.h + 8, Math.min(atlasImage.height, Math.round(baseViewportH / safeZoom)));
     const maxX = Math.max(0, atlasImage.width - viewportW);
     const maxY = Math.max(0, atlasImage.height - viewportH);
     const originX = clamp(
@@ -705,7 +729,7 @@ function AtlasSourcePreview({
       originX,
       originY,
     };
-  }, [atlasImage, source, viewportOrigin]);
+  }, [atlasImage, source, viewportOrigin, zoom, width, height]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
     if (!atlasImage || !renderStateRef.current || !onViewportChange) {
@@ -776,6 +800,7 @@ export function SceneEditor() {
   const lastNonEmptySelectionRef = useRef<Exclude<Selection, null> | null>(null);
   const [atlasImages, setAtlasImages] = useState<Partial<Record<string, HTMLImageElement>>>({});
   const [atlasViewPositions, setAtlasViewPositions] = useState<Record<string, AtlasViewportOrigin>>(() => loadAtlasViewPositions());
+  const [atlasPreviewZooms, setAtlasPreviewZooms] = useState<Record<string, number>>(() => loadAtlasPreviewZooms());
   const [drafts, setDrafts] = useState<EditorDrafts>(() => loadDrafts());
   const [sceneKind, setSceneKind] = useState<SceneKind>("solo-library");
   const [tool, setTool] = useState<EditorTool>("select");
@@ -792,6 +817,7 @@ export function SceneEditor() {
   const selectedCatalog = catalog.find((item) => item.key === selectedCatalogKey) ?? null;
   const selectedPropAtlasViewKey = selectedProp ? `${sceneKind}:${selectedProp.id}` : null;
   const selectedPropAtlasView = selectedPropAtlasViewKey ? atlasViewPositions[selectedPropAtlasViewKey] ?? null : null;
+  const selectedPropAtlasPreviewZoom = selectedPropAtlasViewKey ? atlasPreviewZooms[selectedPropAtlasViewKey] ?? 1 : 1;
   const selectedPropAtlasImage = selectedProp?.atlas ? atlasImages[selectedProp.atlas] ?? null : null;
 
   useEffect(() => {
@@ -835,6 +861,13 @@ export function SceneEditor() {
     }
     window.localStorage.setItem(ATLAS_VIEW_STORAGE_KEY, JSON.stringify(atlasViewPositions));
   }, [atlasViewPositions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(ATLAS_PREVIEW_ZOOM_STORAGE_KEY, JSON.stringify(atlasPreviewZooms));
+  }, [atlasPreviewZooms]);
 
   useEffect(() => {
     renderCanvas();
@@ -894,6 +927,7 @@ export function SceneEditor() {
         wanderNodes: scene.wanderNodes.length,
         remoteSlots: scene.remoteSlots.length,
         atlasInspectorOpen: isAtlasInspectorOpen,
+        atlasPreviewZoom: selectedPropAtlasPreviewZoom,
         atlasView:
           selectedPropAtlasViewKey && atlasViewPositions[selectedPropAtlasViewKey]
             ? atlasViewPositions[selectedPropAtlasViewKey]
@@ -918,7 +952,7 @@ export function SceneEditor() {
       delete window.render_game_to_text;
       delete window.advanceTime;
     };
-  }, [scene, tool, selection, atlasViewPositions, selectedPropAtlasViewKey, isAtlasInspectorOpen]);
+  }, [scene, tool, selection, atlasViewPositions, selectedPropAtlasViewKey, isAtlasInspectorOpen, selectedPropAtlasPreviewZoom]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1708,10 +1742,10 @@ export function SceneEditor() {
                     <div className="flex items-end justify-between gap-3">
                       <div>
                         <p className="font-headline text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
-                          Escala visual
+                          Escala en escena
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
-                          Cambia el tamaño final sin tocar manualmente el ancho y el alto.
+                          Cambia el tamaño final con el que la pieza se guarda y se verá en la biblioteca.
                         </p>
                       </div>
                       <span className="font-headline text-sm font-black uppercase tracking-[0.14em] text-primary">
@@ -1847,77 +1881,22 @@ export function SceneEditor() {
                       </select>
                     </label>
 
-                    <div className="flex items-center justify-between gap-3 border border-outline-variant bg-surface-variant px-3 py-3">
-                      <div>
+                    <div className="space-y-3 border border-outline-variant bg-surface-variant px-3 py-3">
+                      <div className="space-y-1">
                         <p className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
                           Vista del atlas
                         </p>
-                        <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
+                        <p className="text-xs leading-relaxed text-on-surface-variant">
                           Ábrela en grande para moverte mejor por la hoja y ajustar el recorte con más aire.
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setIsAtlasInspectorOpen(true)}
-                        className="shrink-0 border border-primary bg-primary/12 px-3 py-2 font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-primary"
+                        className="w-full border border-primary bg-primary/12 px-3 py-2 font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-primary"
                       >
                         Abrir atlas grande
                       </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="space-y-1">
-                        <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source X</span>
-                        <input
-                          type="number"
-                          value={selectedProp.source.x}
-                          onChange={(event) => updateSelectedProp((prop) => {
-                            if (!prop.source) return;
-                            prop.source.x = Math.max(0, Number(event.target.value));
-                          })}
-                          className="w-full border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
-                        />
-                      </label>
-                      <label className="space-y-1">
-                        <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source Y</span>
-                        <input
-                          type="number"
-                          value={selectedProp.source.y}
-                          onChange={(event) => updateSelectedProp((prop) => {
-                            if (!prop.source) return;
-                            prop.source.y = Math.max(0, Number(event.target.value));
-                          })}
-                          className="w-full border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
-                        />
-                      </label>
-                      <label className="space-y-1">
-                        <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source W</span>
-                        <input
-                          type="number"
-                          value={selectedProp.source.w}
-                          onChange={(event) => updateSelectedProp((prop) => {
-                            if (!prop.source) return;
-                            const scale = getPropScaleValue(prop);
-                            prop.source.w = Math.max(1, Number(event.target.value));
-                            applyPropScale(prop, scale);
-                          })}
-                          className="w-full border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
-                        />
-                      </label>
-                      <label className="space-y-1">
-                        <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source H</span>
-                        <input
-                          type="number"
-                          value={selectedProp.source.h}
-                          onChange={(event) => updateSelectedProp((prop) => {
-                            if (!prop.source) return;
-                            const scale = getPropScaleValue(prop);
-                            prop.source.h = Math.max(1, Number(event.target.value));
-                            applyPropScale(prop, scale);
-                          })}
-                          className="w-full border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
-                        />
-                      </label>
                     </div>
                   </div>
                 ) : null}
@@ -2090,6 +2069,7 @@ export function SceneEditor() {
                   source={selectedProp.source}
                   atlasImage={selectedPropAtlasImage}
                   viewportOrigin={selectedPropAtlasView}
+                  zoom={selectedPropAtlasPreviewZoom}
                   width={720}
                   height={460}
                   onViewportChange={(next) => {
@@ -2116,24 +2096,155 @@ export function SceneEditor() {
                 </div>
 
                 <div className="border border-outline-variant bg-surface px-3 py-3">
-                  <p className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
-                    Recorte actual
-                  </p>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-on-surface">
-                    <span>X: {selectedProp.source.x}</span>
-                    <span>Y: {selectedProp.source.y}</span>
-                    <span>W: {selectedProp.source.w}</span>
-                    <span>H: {selectedProp.source.h}</span>
+                  <div className="space-y-1">
+                    <p className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
+                      Recorte del atlas
+                    </p>
+                    <p className="text-xs leading-relaxed text-on-surface-variant">
+                      Aquí se edita el recorte completo. El inspector pequeño ya no repite estos campos.
+                    </p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source X</span>
+                      <input
+                        type="number"
+                        value={selectedProp.source.x}
+                        onChange={(event) => updateSelectedProp((prop) => {
+                          if (!prop.source) return;
+                          prop.source.x = Math.max(0, Number(event.target.value));
+                        })}
+                        className="w-full border border-outline-variant bg-surface-variant px-3 py-2 text-sm text-on-surface"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source Y</span>
+                      <input
+                        type="number"
+                        value={selectedProp.source.y}
+                        onChange={(event) => updateSelectedProp((prop) => {
+                          if (!prop.source) return;
+                          prop.source.y = Math.max(0, Number(event.target.value));
+                        })}
+                        className="w-full border border-outline-variant bg-surface-variant px-3 py-2 text-sm text-on-surface"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source W</span>
+                      <input
+                        type="number"
+                        value={selectedProp.source.w}
+                        onChange={(event) => updateSelectedProp((prop) => {
+                          if (!prop.source) return;
+                          const scale = getPropScaleValue(prop);
+                          prop.source.w = Math.max(1, Number(event.target.value));
+                          applyPropScale(prop, scale);
+                        })}
+                        className="w-full border border-outline-variant bg-surface-variant px-3 py-2 text-sm text-on-surface"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">Source H</span>
+                      <input
+                        type="number"
+                        value={selectedProp.source.h}
+                        onChange={(event) => updateSelectedProp((prop) => {
+                          if (!prop.source) return;
+                          const scale = getPropScaleValue(prop);
+                          prop.source.h = Math.max(1, Number(event.target.value));
+                          applyPropScale(prop, scale);
+                        })}
+                        className="w-full border border-outline-variant bg-surface-variant px-3 py-2 text-sm text-on-surface"
+                      />
+                    </label>
                   </div>
                 </div>
 
                 <div className="border border-outline-variant bg-surface px-3 py-3">
-                  <p className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
-                    Escala visual
+                  <div className="space-y-1">
+                    <p className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
+                      Zoom del atlas
+                    </p>
+                    <p className="text-xs leading-relaxed text-on-surface-variant">
+                      Solo acerca o aleja la imagen grande del atlas. No cambia el tamaño con el que se guarda la pieza en la biblioteca.
+                    </p>
+                  </div>
+
+                  <p className="mt-2 font-headline text-lg font-black uppercase tracking-[0.14em] text-primary">
+                    {selectedPropAtlasPreviewZoom}x
                   </p>
+
+                  <div className="mt-3 grid grid-cols-[1fr_5.25rem] gap-3">
+                    <input
+                      type="range"
+                      min={String(MIN_ATLAS_PREVIEW_ZOOM)}
+                      max="6"
+                      step="0.1"
+                      value={selectedPropAtlasPreviewZoom}
+                      onChange={(event) => {
+                        if (!selectedPropAtlasViewKey) return;
+                        setAtlasPreviewZooms((current) => ({
+                          ...current,
+                          [selectedPropAtlasViewKey]: Number(event.target.value),
+                        }));
+                      }}
+                    />
+                    <input
+                      type="number"
+                      min={String(MIN_ATLAS_PREVIEW_ZOOM)}
+                      max="6"
+                      step="0.1"
+                      value={selectedPropAtlasPreviewZoom}
+                      onChange={(event) => {
+                        if (!selectedPropAtlasViewKey) return;
+                        setAtlasPreviewZooms((current) => ({
+                          ...current,
+                          [selectedPropAtlasViewKey]: clamp(Number(event.target.value), MIN_ATLAS_PREVIEW_ZOOM, 6),
+                        }));
+                      }}
+                      className="w-full border border-outline-variant bg-surface-variant px-3 py-2 text-sm text-on-surface"
+                    />
+                  </div>
+                </div>
+
+                <div className="border border-outline-variant bg-surface px-3 py-3">
+                  <div className="space-y-1">
+                    <p className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
+                      Escala en escena
+                    </p>
+                    <p className="text-xs leading-relaxed text-on-surface-variant">
+                      Esto sí cambia el tamaño final con el que la pieza se guarda y se verá luego dentro de la biblioteca.
+                    </p>
+                  </div>
+
                   <p className="mt-2 font-headline text-lg font-black uppercase tracking-[0.14em] text-primary">
                     {getPropScaleValue(selectedProp)}x
                   </p>
+
+                  <div className="mt-3 grid grid-cols-[1fr_5.25rem] gap-3">
+                    <input
+                      type="range"
+                      min={String(MIN_PROP_SCALE)}
+                      max="6"
+                      step="0.05"
+                      value={getPropScaleValue(selectedProp)}
+                      onChange={(event) => updateSelectedProp((prop) => {
+                        applyPropScale(prop, Number(event.target.value));
+                      })}
+                    />
+                    <input
+                      type="number"
+                      min={String(MIN_PROP_SCALE)}
+                      max="6"
+                      step="0.05"
+                      value={getPropScaleValue(selectedProp)}
+                      onChange={(event) => updateSelectedProp((prop) => {
+                        applyPropScale(prop, Number(event.target.value));
+                      })}
+                      className="w-full border border-outline-variant bg-surface-variant px-3 py-2 text-sm text-on-surface"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
