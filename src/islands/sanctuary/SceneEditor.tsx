@@ -5,7 +5,7 @@ import { sceneAtlasCatalog, sceneAtlasEntries, type SceneAtlasId } from "@/lib/s
 import { drawPixelAvatar } from "@/lib/sanctuary/canvas/avatarPainter";
 import { drawSceneBackground, drawSceneProp } from "@/lib/sanctuary/canvas/renderer";
 import { sceneMaps } from "@/lib/sanctuary/canvas/sceneMaps";
-import type { SceneKind, SceneMap, SceneProp, TilePoint } from "@/lib/sanctuary/canvas/types";
+import { sceneLayerOrder, type SceneKind, type SceneLayer, type SceneMap, type SceneProp, type TilePoint } from "@/lib/sanctuary/canvas/types";
 import { getCurrentProfileSummary, useSanctuaryStore } from "@/lib/sanctuary/store";
 
 declare global {
@@ -82,6 +82,13 @@ const toolLabels: Record<EditorTool, string> = {
   seatLocal: "Asiento",
   wanderNodes: "Ruta de paseo",
   remoteSlots: "Slots remotos",
+};
+
+const sceneLayerLabels: Record<SceneLayer, string> = {
+  back: "Fondo",
+  "mid-back": "Medio detrás",
+  "mid-front": "Medio delante",
+  front: "Frente",
 };
 
 function clonePoint(point: TilePoint) {
@@ -172,6 +179,7 @@ function buildCatalog(): PropCatalogItem[] {
     }
 
     seen.add(key);
+    const defaultRenderScale = "defaultRenderScale" in entry ? entry.defaultRenderScale : 1;
     catalog.push({
       key,
       label: `Nuevo recorte · ${entry.label}`,
@@ -179,8 +187,8 @@ function buildCatalog(): PropCatalogItem[] {
         template: {
           atlas: entry.id,
           source: { x: 0, y: 0, w: entry.defaultSlice.w, h: entry.defaultSlice.h },
-          w: entry.defaultSlice.w,
-          h: entry.defaultSlice.h,
+          w: Math.max(MIN_PROP_SIZE, Math.round(entry.defaultSlice.w * defaultRenderScale)),
+          h: Math.max(MIN_PROP_SIZE, Math.round(entry.defaultSlice.h * defaultRenderScale)),
           rotation: 0,
           layer: "back",
         },
@@ -206,6 +214,11 @@ function snapTile(value: number) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function getLayerOrder(layer: SceneLayer) {
+  const index = sceneLayerOrder.indexOf(layer);
+  return index === -1 ? 0 : index;
 }
 
 function isFormFieldTarget(target: EventTarget | null) {
@@ -259,17 +272,22 @@ function getRotatedBounds(prop: SceneProp) {
   };
 }
 
+function getAtlasViewportWindow(atlasImage: HTMLImageElement, zoom: number, previewWidth: number, previewHeight: number) {
+  const safeZoom = clamp(zoom, MIN_ATLAS_PREVIEW_ZOOM, 6);
+  return {
+    viewportW: Math.max(32, Math.min(atlasImage.width, Math.round((previewWidth - 16) / safeZoom))),
+    viewportH: Math.max(32, Math.min(atlasImage.height, Math.round((previewHeight - 16) / safeZoom))),
+  };
+}
+
 function getCenteredAtlasViewport(
   source: NonNullable<SceneProp["source"]>,
   atlasImage: HTMLImageElement,
   zoom: number,
+  previewWidth = ATLAS_PREVIEW_MODAL_WIDTH,
+  previewHeight = ATLAS_PREVIEW_MODAL_HEIGHT,
 ) {
-  const margin = 16;
-  const safeZoom = clamp(zoom, MIN_ATLAS_PREVIEW_ZOOM, 6);
-  const baseViewportW = source.w + margin * 2;
-  const baseViewportH = source.h + margin * 2;
-  const viewportW = Math.max(source.w + 8, Math.min(atlasImage.width, Math.round(baseViewportW / safeZoom)));
-  const viewportH = Math.max(source.h + 8, Math.min(atlasImage.height, Math.round(baseViewportH / safeZoom)));
+  const { viewportW, viewportH } = getAtlasViewportWindow(atlasImage, zoom, previewWidth, previewHeight);
   const centerX = source.x + source.w / 2;
   const centerY = source.y + source.h / 2;
   return {
@@ -368,7 +386,10 @@ function normalizeSceneMap(value: unknown, sceneKind: SceneKind): SceneMap {
             w: typeof prop.w === "number" ? prop.w : 32,
             h: typeof prop.h === "number" ? prop.h : 32,
             rotation: typeof prop.rotation === "number" ? normalizeRotation(prop.rotation) : 0,
-            layer: prop.layer === "front" ? "front" : "back",
+            layer:
+              prop.layer === "mid-back" || prop.layer === "mid-front" || prop.layer === "front"
+                ? prop.layer
+                : "back",
             alpha: typeof prop.alpha === "number" ? prop.alpha : undefined,
             tint: typeof prop.tint === "string" ? prop.tint : undefined,
             shape:
@@ -551,10 +572,7 @@ function findSelectionAt(scene: SceneMap, x: number, y: number): Selection {
     }
   }
 
-  const orderedProps = [
-    ...scene.props.filter((prop) => prop.layer === "back"),
-    ...scene.props.filter((prop) => prop.layer === "front"),
-  ];
+  const orderedProps = [...scene.props].sort((left, right) => getLayerOrder(left.layer) - getLayerOrder(right.layer));
 
   for (let index = orderedProps.length - 1; index >= 0; index -= 1) {
     const prop = orderedProps[index];
@@ -794,21 +812,16 @@ function AtlasSourcePreview({
       return;
     }
 
-    const margin = 16;
-    const safeZoom = clamp(zoom, MIN_ATLAS_PREVIEW_ZOOM, 6);
-    const baseViewportW = source.w + margin * 2;
-    const baseViewportH = source.h + margin * 2;
-    const viewportW = Math.max(source.w + 8, Math.min(atlasImage.width, Math.round(baseViewportW / safeZoom)));
-    const viewportH = Math.max(source.h + 8, Math.min(atlasImage.height, Math.round(baseViewportH / safeZoom)));
+    const { viewportW, viewportH } = getAtlasViewportWindow(atlasImage, zoom, width, height);
     const maxX = Math.max(0, atlasImage.width - viewportW);
     const maxY = Math.max(0, atlasImage.height - viewportH);
     const originX = clamp(
-      viewportOrigin?.x ?? source.x - margin,
+      viewportOrigin?.x ?? getCenteredAtlasViewport(source, atlasImage, zoom, width, height).x,
       0,
       maxX,
     );
     const originY = clamp(
-      viewportOrigin?.y ?? source.y - margin,
+      viewportOrigin?.y ?? getCenteredAtlasViewport(source, atlasImage, zoom, width, height).y,
       0,
       maxY,
     );
@@ -923,10 +936,7 @@ function AtlasSourcePreview({
     onSourceChange(nextSource);
 
     if (onViewportChange) {
-      onViewportChange({
-        x: clamp(Math.round(atlasPointX - state.viewportW / 2), 0, Math.max(0, atlasImage.width - state.viewportW)),
-        y: clamp(Math.round(atlasPointY - state.viewportH / 2), 0, Math.max(0, atlasImage.height - state.viewportH)),
-      });
+      onViewportChange(getCenteredAtlasViewport(nextSource, atlasImage, zoom, width, height));
     }
   }
 
@@ -1114,6 +1124,7 @@ export function SceneEditor() {
             ? {
                 id: selectedProp.id,
                 atlas: selectedProp.atlas ?? null,
+                layer: selectedProp.layer,
                 w: selectedProp.w,
                 h: selectedProp.h,
                 rotation: normalizeRotation(selectedProp.rotation),
@@ -1121,7 +1132,7 @@ export function SceneEditor() {
                 scale: getPropScaleValue(selectedProp),
               }
             : selectedProp
-              ? { id: selectedProp.id, w: selectedProp.w, h: selectedProp.h, rotation: normalizeRotation(selectedProp.rotation), scale: 1 }
+              ? { id: selectedProp.id, layer: selectedProp.layer, w: selectedProp.w, h: selectedProp.h, rotation: normalizeRotation(selectedProp.rotation), scale: 1 }
               : null,
       });
     window.advanceTime = () => undefined;
@@ -1255,7 +1266,8 @@ export function SceneEditor() {
 
     drawSceneBackground(ctx, scene);
     scene.props
-      .filter((prop) => prop.layer === "back")
+      .filter((prop) => prop.layer === "back" || prop.layer === "mid-back")
+      .sort((left, right) => getLayerOrder(left.layer) - getLayerOrder(right.layer))
       .forEach((prop) => drawSceneProp(ctx, prop, atlasImages));
 
     if (showGrid) {
@@ -1274,7 +1286,8 @@ export function SceneEditor() {
     });
 
     scene.props
-      .filter((prop) => prop.layer === "front")
+      .filter((prop) => prop.layer === "mid-front" || prop.layer === "front")
+      .sort((left, right) => getLayerOrder(left.layer) - getLayerOrder(right.layer))
       .forEach((prop) => drawSceneProp(ctx, prop, atlasImages));
 
     drawMarker(ctx, scene, scene.spawnLocal, "SP", "#ffb961", selection?.kind === "spawnLocal");
@@ -1655,13 +1668,29 @@ export function SceneEditor() {
     });
   }
 
-  function moveSelectedProp(direction: "front" | "back") {
+  function setSelectedPropLayer(layer: SceneLayer) {
     if (!selection || selection.kind !== "prop") {
       return;
     }
 
     updateSelectedProp((prop) => {
-      prop.layer = direction;
+      prop.layer = layer;
+    });
+  }
+
+  function nudgeSelectedPropLayer(direction: "up" | "down") {
+    if (!selection || selection.kind !== "prop") {
+      return;
+    }
+
+    updateSelectedProp((prop) => {
+      const currentIndex = getLayerOrder(prop.layer);
+      const nextIndex = clamp(
+        currentIndex + (direction === "up" ? 1 : -1),
+        0,
+        sceneLayerOrder.length - 1,
+      );
+      prop.layer = sceneLayerOrder[nextIndex];
     });
   }
 
@@ -1693,7 +1722,6 @@ export function SceneEditor() {
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(payload);
-        setFlash("JSON copiado");
         animateCopyButton(true);
         return;
       }
@@ -1714,7 +1742,9 @@ export function SceneEditor() {
 
     try {
       const copied = document.execCommand("copy");
-      setFlash(copied ? "JSON copiado" : "No se pudo copiar el JSON");
+      if (!copied) {
+        setFlash("No se pudo copiar el JSON");
+      }
       animateCopyButton(copied);
     } catch {
       setFlash("No se pudo copiar el JSON");
@@ -2247,12 +2277,18 @@ export function SceneEditor() {
                     <select
                       value={selectedProp.layer}
                       onChange={(event) => updateSelectedProp((prop) => {
-                        prop.layer = event.target.value === "front" ? "front" : "back";
+                        prop.layer =
+                          event.target.value === "mid-back" || event.target.value === "mid-front" || event.target.value === "front"
+                            ? event.target.value
+                            : "back";
                       })}
                       className="w-full border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
                     >
-                      <option value="back">Fondo</option>
-                      <option value="front">Frente</option>
+                      {sceneLayerOrder.map((layer) => (
+                        <option key={layer} value={layer}>
+                          {sceneLayerLabels[layer]}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className="space-y-1">
@@ -2274,17 +2310,31 @@ export function SceneEditor() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => moveSelectedProp("back")}
+                    onClick={() => setSelectedPropLayer("back")}
                     className="border border-outline-variant bg-surface px-3 py-3 font-headline text-[10px] font-bold uppercase tracking-[0.16em]"
                   >
-                    Mandar detrás
+                    Mandar al fondo
                   </button>
                   <button
                     type="button"
-                    onClick={() => moveSelectedProp("front")}
+                    onClick={() => setSelectedPropLayer("front")}
                     className="border border-outline-variant bg-surface px-3 py-3 font-headline text-[10px] font-bold uppercase tracking-[0.16em]"
                   >
-                    Traer delante
+                    Traer al frente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => nudgeSelectedPropLayer("down")}
+                    className="border border-outline-variant bg-surface px-3 py-3 font-headline text-[10px] font-bold uppercase tracking-[0.16em]"
+                  >
+                    Bajar capa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => nudgeSelectedPropLayer("up")}
+                    className="border border-outline-variant bg-surface px-3 py-3 font-headline text-[10px] font-bold uppercase tracking-[0.16em]"
+                  >
+                    Subir capa
                   </button>
                   <button
                     type="button"

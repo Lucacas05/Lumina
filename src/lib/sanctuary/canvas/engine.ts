@@ -3,14 +3,15 @@ import { drawPixelAvatar, drawSpeechBubble } from "@/lib/sanctuary/canvas/avatar
 import { sceneAtlasEntries } from "@/lib/sanctuary/canvas/atlasCatalog";
 import { getSceneMap } from "@/lib/sanctuary/canvas/sceneMaps";
 import { drawSceneBackground, drawSceneProp } from "@/lib/sanctuary/canvas/renderer";
-import type {
-  ActorPose,
-  ActorState,
-  CanvasRemotePlayer,
-  Facing,
-  SceneKind,
-  SceneMap,
-  TilePoint,
+import {
+  sceneLayerOrder,
+  type ActorPose,
+  type ActorState,
+  type CanvasRemotePlayer,
+  type Facing,
+  type SceneKind,
+  type SceneMap,
+  type TilePoint,
 } from "@/lib/sanctuary/canvas/types";
 
 interface LocalActor {
@@ -38,6 +39,11 @@ const FIXED_STEP_MS = 1000 / 60;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getLayerOrder(layer: SceneMap["props"][number]["layer"]) {
+  const index = sceneLayerOrder.indexOf(layer);
+  return index === -1 ? 0 : index;
 }
 
 function chooseFacing(fromX: number, fromY: number, toX: number, toY: number): Facing {
@@ -361,9 +367,13 @@ export class SanctuaryCanvasEngine {
     ctx.clearRect(0, 0, pixelWidth, pixelHeight);
     drawSceneBackground(ctx, this.map);
 
-    const backProps = this.map.props.filter((prop) => prop.layer === "back");
-    const frontProps = this.map.props.filter((prop) => prop.layer === "front");
-    backProps.forEach((prop) => drawSceneProp(ctx, prop, this.atlasImages));
+    const behindActors = this.map.props
+      .filter((prop) => prop.layer === "back" || prop.layer === "mid-back")
+      .sort((left, right) => getLayerOrder(left.layer) - getLayerOrder(right.layer));
+    const inFrontOfActors = this.map.props
+      .filter((prop) => prop.layer === "mid-front" || prop.layer === "front")
+      .sort((left, right) => getLayerOrder(left.layer) - getLayerOrder(right.layer));
+    behindActors.forEach((prop) => drawSceneProp(ctx, prop, this.atlasImages));
 
     const actors = [
       {
@@ -406,7 +416,7 @@ export class SanctuaryCanvasEngine {
       drawSpeechBubble(ctx, actor.bubble, drawX, drawY - 8);
     });
 
-    frontProps.forEach((prop) => drawSceneProp(ctx, prop, this.atlasImages));
+    inFrontOfActors.forEach((prop) => drawSceneProp(ctx, prop, this.atlasImages));
 
     if (Object.keys(this.atlasImages).length === 0 && this.sceneKind !== "garden") {
       ctx.fillStyle = "#f0d6b0";

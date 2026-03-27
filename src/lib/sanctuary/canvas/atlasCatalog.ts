@@ -89,6 +89,13 @@ export const sceneAtlasCatalog = {
     url: "/game/atlases/wall-puerta.png",
     defaultSlice: { w: 32, h: 32 },
   },
+  "escritorio-idiviadual": {
+    id: "escritorio-idiviadual",
+    label: "Escritorio individual",
+    url: "/game/atlases/escritorio-idiviadual.png",
+    defaultSlice: { w: 1536, h: 1024 },
+    defaultRenderScale: 0.08,
+  },
 } as const;
 
 export type SceneAtlasId = keyof typeof sceneAtlasCatalog;
