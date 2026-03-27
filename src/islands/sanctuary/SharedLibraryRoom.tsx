@@ -63,11 +63,9 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
         return;
       }
 
-      if (currentPresence.state === "break") {
-        void sceneRef.current?.iniciarBreak();
-        if (currentPresence.message) {
-          sceneRef.current?.mostrarMensaje(currentPresence.message);
-        }
+      void sceneRef.current?.iniciarBreak();
+      if (currentPresence.state === "break" && currentPresence.message) {
+        sceneRef.current?.mostrarMensaje(currentPresence.message);
       }
     });
 

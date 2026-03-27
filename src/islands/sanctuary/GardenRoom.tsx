@@ -44,16 +44,14 @@ export function GardenRoom({ backgroundUrl: _backgroundUrl }: GardenRoomProps) {
 
     previousStateRef.current = currentPresence.state;
     const frame = window.requestAnimationFrame(() => {
-      if (currentPresence.state === "break") {
-        void sceneRef.current?.iniciarBreak();
-        if (currentPresence.message) {
-          sceneRef.current?.mostrarMensaje(currentPresence.message);
-        }
+      if (currentPresence.state === "studying") {
+        void sceneRef.current?.iniciarFocus();
         return;
       }
 
-      if (currentPresence.state === "studying") {
-        void sceneRef.current?.iniciarFocus();
+      void sceneRef.current?.iniciarBreak();
+      if (currentPresence.state === "break" && currentPresence.message) {
+        sceneRef.current?.mostrarMensaje(currentPresence.message);
       }
     });
 

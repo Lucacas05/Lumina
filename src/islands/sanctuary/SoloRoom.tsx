@@ -38,9 +38,7 @@ export function SoloRoom({ backgroundUrl: _backgroundUrl }: SoloRoomProps) {
         return;
       }
 
-      if (currentPresence.state === "break") {
-        void sceneRef.current?.iniciarBreak();
-      }
+      void sceneRef.current?.iniciarBreak();
     });
 
     return () => window.cancelAnimationFrame(frame);
