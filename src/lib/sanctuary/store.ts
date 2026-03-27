@@ -8,15 +8,148 @@ export type TimerPhase = "focus" | "break";
 export type TimerStatus = "idle" | "running" | "paused";
 export type ChronicleTone = "primary" | "secondary" | "tertiary";
 
+const GARMENT_COLOR_VALUES = [
+  "amber",
+  "amethyst",
+  "barberry",
+  "black",
+  "blue",
+  "blue-violet",
+  "bronze",
+  "brown",
+  "burnt-orange",
+  "burnt-umber",
+  "cerise",
+  "chocolate",
+  "coffee",
+  "cornflower",
+  "cream",
+  "cyan",
+  "fern",
+  "forest",
+  "gray",
+  "green",
+  "ice",
+  "indigo",
+  "ivory",
+  "lavender",
+  "leather",
+  "mustard",
+  "navy",
+  "neptune",
+  "olivine",
+  "orange",
+  "peach",
+  "pink",
+  "plum",
+  "red",
+  "sepia",
+  "silver",
+  "smoke",
+  "spring",
+  "swamp",
+  "tan",
+  "tumeric",
+  "umber",
+  "white",
+  "yellow",
+] as const;
+
+export type AvatarSex = "masculino" | "femenino";
+export type AvatarSkinTone =
+  | "amber"
+  | "bronze"
+  | "brown"
+  | "chocolate"
+  | "coffee"
+  | "cream"
+  | "ivory"
+  | "leather"
+  | "peach"
+  | "sepia"
+  | "tan";
+export type AvatarHairStyle =
+  | "short-01-buzzcut"
+  | "short-02-parted"
+  | "short-03-curly"
+  | "short-04-cowlick"
+  | "short-05-natural"
+  | "short-06-balding"
+  | "short-07-flat-top"
+  | "short-08-flat-top-fade"
+  | "medium-01-page"
+  | "medium-02-curly"
+  | "medium-03-idol"
+  | "medium-04-bangs-bun"
+  | "medium-05-cornrows"
+  | "medium-06-dreadlocks"
+  | "medium-07-bob-side-part"
+  | "medium-08-bob-bangs"
+  | "medium-09-twists"
+  | "medium-10-twists-fade";
+export type AvatarHairColor =
+  | "ash-brown"
+  | "black"
+  | "blonde"
+  | "blue"
+  | "brown"
+  | "chestnut"
+  | "gray"
+  | "green"
+  | "orange"
+  | "pink"
+  | "platinum"
+  | "raven"
+  | "red"
+  | "ruby"
+  | "teal"
+  | "violet"
+  | "white";
+export type AvatarAccessory =
+  | "ninguno"
+  | "bigote"
+  | "barba-corta"
+  | "barbarian"
+  | "barbarian-nasal"
+  | "barbarian-viking"
+  | "barbuta"
+  | "barbuta-simple"
+  | "close"
+  | "flattop"
+  | "greathelm"
+  | "nasal"
+  | "spangenhelm"
+  | "spangenhelm-viking"
+  | "sugarloaf"
+  | "sugarloaf-simple";
+export type AvatarUpper =
+  | "shirt-01-longsleeve"
+  | "shirt-02-vneck-longsleeve"
+  | "shirt-03-scoop-longsleeve"
+  | "shirt-04-tee"
+  | "shirt-05-vneck-tee"
+  | "shirt-06-scoop-tee";
+export type AvatarLower =
+  | "pants-01-hose"
+  | "pants-02-leggings"
+  | "pants-03-pants"
+  | "pants-04-cuffed"
+  | "pants-05-overalls";
+export type AvatarSocks = "socks-01-ankle" | "socks-02-high";
+export type AvatarGarmentColor = (typeof GARMENT_COLOR_VALUES)[number];
+
 export interface AvatarConfig {
-  base: "archivo" | "vigia" | "viajera";
-  skinTone: "marfil" | "miel" | "bronce" | "umbra";
-  hairStyle: "corto" | "ondas" | "coleta" | "capucha";
-  hairColor: "obsidiana" | "castano" | "cobre" | "plata";
-  facialHair: "ninguno" | "bigote" | "barba-corta";
-  outfit: "escriba" | "alquimista" | "guardabosques";
-  accessory: "ninguno" | "libro" | "te" | "pluma" | "linterna";
-  expression: "sereno" | "despierto" | "picaro";
+  sex: AvatarSex;
+  skinTone: AvatarSkinTone;
+  hairStyle: AvatarHairStyle;
+  hairColor: AvatarHairColor;
+  accessory: AvatarAccessory;
+  upper: AvatarUpper;
+  upperColor: AvatarGarmentColor;
+  lower: AvatarLower;
+  lowerColor: AvatarGarmentColor;
+  socks: AvatarSocks;
+  socksColor: AvatarGarmentColor;
 }
 
 export interface Profile {
@@ -114,58 +247,291 @@ export interface AchievementDefinition {
   description: string;
 }
 
+export const garmentColorMeta: Record<
+  AvatarGarmentColor,
+  { label: string; description: string; source: string; swatch: string }
+> = {
+  amber: { label: "Ámbar", description: "Dorado cálido.", source: "Amber", swatch: "#b8782d" },
+  amethyst: { label: "Amatista", description: "Violeta profundo.", source: "Amethyst", swatch: "#6a4a8c" },
+  barberry: { label: "Agracejo", description: "Rojo oscuro.", source: "Barberry", swatch: "#7a2338" },
+  black: { label: "Negro", description: "Negro puro.", source: "Black", swatch: "#262223" },
+  blue: { label: "Azul", description: "Azul vivo.", source: "Blue", swatch: "#3d69a6" },
+  "blue-violet": {
+    label: "Azul violeta",
+    description: "Mezcla azul y violeta.",
+    source: "Blue Violet",
+    swatch: "#5650a2",
+  },
+  bronze: { label: "Bronce", description: "Bronce mate.", source: "Bronze", swatch: "#98714f" },
+  brown: { label: "Marrón", description: "Marrón clásico.", source: "Brown", swatch: "#72503b" },
+  "burnt-orange": {
+    label: "Naranja quemado",
+    description: "Naranja tostado.",
+    source: "Burnt Orange",
+    swatch: "#b95c23",
+  },
+  "burnt-umber": {
+    label: "Siena tostada",
+    description: "Marrón rojizo oscuro.",
+    source: "Burnt Umber",
+    swatch: "#7a4b32",
+  },
+  cerise: { label: "Cereza", description: "Rosa cereza.", source: "Cerise", swatch: "#a13668" },
+  chocolate: { label: "Chocolate", description: "Marrón oscuro.", source: "Chocolate", swatch: "#5b3323" },
+  coffee: { label: "Café", description: "Café profundo.", source: "Coffee", swatch: "#5d4336" },
+  cornflower: { label: "Aciano", description: "Azul aciano.", source: "Cornflower", swatch: "#6d85d5" },
+  cream: { label: "Crema", description: "Crema suave.", source: "Cream", swatch: "#d8c5a3" },
+  cyan: { label: "Cian", description: "Cian brillante.", source: "Cyan", swatch: "#3e9ca7" },
+  fern: { label: "Helecho", description: "Verde helecho.", source: "Fern", swatch: "#4c7a45" },
+  forest: { label: "Bosque", description: "Verde bosque.", source: "Forest", swatch: "#355a3d" },
+  gray: { label: "Gris", description: "Gris neutro.", source: "Gray", swatch: "#6f7075" },
+  green: { label: "Verde", description: "Verde limpio.", source: "Green", swatch: "#4a8244" },
+  ice: { label: "Hielo", description: "Celeste pálido.", source: "Ice", swatch: "#95d3eb" },
+  indigo: { label: "Índigo", description: "Índigo oscuro.", source: "Indigo", swatch: "#433f7e" },
+  ivory: { label: "Marfil", description: "Marfil claro.", source: "Ivory", swatch: "#efe7d5" },
+  lavender: { label: "Lavanda", description: "Lavanda suave.", source: "Lavender", swatch: "#927eb7" },
+  leather: { label: "Cuero", description: "Cuero curtido.", source: "Leather", swatch: "#886048" },
+  mustard: { label: "Mostaza", description: "Mostaza dorada.", source: "Mustard", swatch: "#9e8130" },
+  navy: { label: "Marino", description: "Azul marino.", source: "Navy", swatch: "#2e446e" },
+  neptune: { label: "Neptuno", description: "Azul verdoso profundo.", source: "Neptune", swatch: "#2f6a78" },
+  olivine: { label: "Olivino", description: "Verde oliva claro.", source: "Olivine", swatch: "#728b4d" },
+  orange: { label: "Naranja", description: "Naranja vivo.", source: "Orange", swatch: "#c36b22" },
+  peach: { label: "Melocotón", description: "Melocotón suave.", source: "Peach", swatch: "#d8a38a" },
+  pink: { label: "Rosa", description: "Rosa claro.", source: "Pink", swatch: "#c77ea4" },
+  plum: { label: "Ciruela", description: "Morado ciruela.", source: "Plum", swatch: "#69415a" },
+  red: { label: "Rojo", description: "Rojo intenso.", source: "Red", swatch: "#a53a36" },
+  sepia: { label: "Sepia", description: "Sepia oscuro.", source: "Sepia", swatch: "#6a4d3f" },
+  silver: { label: "Plata", description: "Plata fría.", source: "Silver", swatch: "#9ca5b0" },
+  smoke: { label: "Humo", description: "Gris ahumado.", source: "Smoke", swatch: "#8b8583" },
+  spring: { label: "Primavera", description: "Verde primavera.", source: "Spring", swatch: "#69a04f" },
+  swamp: { label: "Pantano", description: "Verde oscuro apagado.", source: "Swamp", swatch: "#536246" },
+  tan: { label: "Tostado", description: "Tostado medio.", source: "Tan", swatch: "#b18462" },
+  tumeric: { label: "Cúrcuma", description: "Amarillo cálido.", source: "Tumeric", swatch: "#b78e28" },
+  umber: { label: "Sombra", description: "Marrón umber.", source: "Umber", swatch: "#694a39" },
+  white: { label: "Blanco", description: "Blanco limpio.", source: "White", swatch: "#f3f3f1" },
+  yellow: { label: "Amarillo", description: "Amarillo vivo.", source: "Yellow", swatch: "#d6b730" },
+};
+
+const garmentColorOptions = GARMENT_COLOR_VALUES.map((value) => ({
+  value,
+  label: garmentColorMeta[value].label,
+  description: garmentColorMeta[value].description,
+})) satisfies AvatarOption<AvatarGarmentColor>[];
+
 export const PUBLIC_ROOM_CODE = "gran-lectorio";
 export const SOLO_ROOM_CODE = "santuario-silencioso";
 export const FOCUS_SECONDS = 25 * 60;
 export const BREAK_SECONDS = 5 * 60;
 
 export const avatarOptions = {
-  base: [
-    { value: "archivo", label: "Archivo", description: "Silueta equilibrada de escriba." },
-    { value: "vigia", label: "Vigía", description: "Hombros firmes y capa corta." },
-    { value: "viajera", label: "Viajera", description: "Figura ligera y gesto vivaz." },
-  ] satisfies AvatarOption<AvatarConfig["base"]>[],
+  sex: [
+    { value: "masculino", label: "Hombre", description: "Modelo masculino del pack LPC." },
+    { value: "femenino", label: "Mujer", description: "Modelo femenino del pack LPC." },
+  ] satisfies AvatarOption<AvatarConfig["sex"]>[],
   skinTone: [
-    { value: "marfil", label: "Marfil", description: "Claro con luz cálida." },
-    { value: "miel", label: "Miel", description: "Tono dorado suave." },
-    { value: "bronce", label: "Bronce", description: "Profundo y cálido." },
-    { value: "umbra", label: "Umbra", description: "Oscuro con contraste alto." },
+    { value: "amber", label: "Ámbar", description: "Tono cálido claro." },
+    { value: "bronze", label: "Bronce", description: "Profundo y cálido." },
+    { value: "brown", label: "Moreno", description: "Moreno medio." },
+    { value: "chocolate", label: "Chocolate", description: "Oscuro con base rojiza." },
+    { value: "coffee", label: "Café", description: "Oscuro y neutro." },
+    { value: "cream", label: "Crema", description: "Claro suave." },
+    { value: "ivory", label: "Marfil", description: "Muy claro." },
+    { value: "leather", label: "Cuero", description: "Bronce curtido." },
+    { value: "peach", label: "Melocotón", description: "Rosado claro." },
+    { value: "sepia", label: "Sepia", description: "Oscuro con matiz castaño." },
+    { value: "tan", label: "Tostado", description: "Tostado medio." },
   ] satisfies AvatarOption<AvatarConfig["skinTone"]>[],
   hairStyle: [
-    { value: "corto", label: "Corto", description: "Recogido y limpio." },
-    { value: "ondas", label: "Ondas", description: "Volumen suave." },
-    { value: "coleta", label: "Coleta", description: "Recogido largo." },
-    { value: "capucha", label: "Capucha", description: "Cubierto por tejido." },
+    { value: "short-01-buzzcut", label: "Buzzcut", description: "Muy corto y limpio." },
+    { value: "short-02-parted", label: "Corto con raya", description: "Peinado corto abierto." },
+    { value: "short-03-curly", label: "Corto rizado", description: "Rizo compacto." },
+    { value: "short-04-cowlick", label: "Corto despeinado", description: "Con mechón levantado." },
+    { value: "short-05-natural", label: "Natural corto", description: "Textura natural." },
+    { value: "short-06-balding", label: "Entradas", description: "Frontal despejado." },
+    { value: "short-07-flat-top", label: "Flat top", description: "Plano y alto." },
+    { value: "short-08-flat-top-fade", label: "Flat top fade", description: "Plano con fade." },
+    { value: "medium-01-page", label: "Page", description: "Media melena recta." },
+    { value: "medium-02-curly", label: "Media melena rizada", description: "Curvas amplias." },
+    { value: "medium-03-idol", label: "Idol", description: "Peinado con volumen frontal." },
+    { value: "medium-04-bangs-bun", label: "Flequillo y moño", description: "Recogido con fleco." },
+    { value: "medium-05-cornrows", label: "Cornrows", description: "Trenzas pegadas." },
+    { value: "medium-06-dreadlocks", label: "Dreadlocks", description: "Melenita de rastas." },
+    { value: "medium-07-bob-side-part", label: "Bob lateral", description: "Bob con raya al lado." },
+    { value: "medium-08-bob-bangs", label: "Bob con flequillo", description: "Bob recto." },
+    { value: "medium-09-twists", label: "Twists", description: "Twists medios." },
+    { value: "medium-10-twists-fade", label: "Twists con fade", description: "Laterales rebajados." },
   ] satisfies AvatarOption<AvatarConfig["hairStyle"]>[],
   hairColor: [
-    { value: "obsidiana", label: "Obsidiana", description: "Negro profundo." },
-    { value: "castano", label: "Castaño", description: "Marrón terroso." },
-    { value: "cobre", label: "Cobre", description: "Ámbar rojizo." },
-    { value: "plata", label: "Plata", description: "Claro y frío." },
+    { value: "ash-brown", label: "Ceniza", description: "Marrón ceniza." },
+    { value: "black", label: "Negro", description: "Negro puro." },
+    { value: "blonde", label: "Rubio", description: "Rubio claro." },
+    { value: "blue", label: "Azul", description: "Azul." },
+    { value: "brown", label: "Marrón", description: "Marrón." },
+    { value: "chestnut", label: "Castaño", description: "Castaño rojizo." },
+    { value: "gray", label: "Gris", description: "Gris." },
+    { value: "green", label: "Verde", description: "Verde." },
+    { value: "orange", label: "Naranja", description: "Naranja." },
+    { value: "pink", label: "Rosa", description: "Rosa." },
+    { value: "platinum", label: "Platino", description: "Platino." },
+    { value: "raven", label: "Cuervo", description: "Negro azulado." },
+    { value: "red", label: "Rojo", description: "Rojo." },
+    { value: "ruby", label: "Ruby", description: "Rubí." },
+    { value: "teal", label: "Turquesa", description: "Turquesa." },
+    { value: "violet", label: "Violeta", description: "Violeta." },
+    { value: "white", label: "Blanco", description: "Blanco." },
   ] satisfies AvatarOption<AvatarConfig["hairColor"]>[],
-  facialHair: [
-    { value: "ninguno", label: "Sin vello", description: "Rostro limpio." },
-    { value: "bigote", label: "Bigote", description: "Línea fina sobre el labio." },
-    { value: "barba-corta", label: "Barba corta", description: "Sombra concentrada." },
-  ] satisfies AvatarOption<AvatarConfig["facialHair"]>[],
-  outfit: [
-    { value: "escriba", label: "Escriba", description: "Tonos dorados y tinta." },
-    { value: "alquimista", label: "Alquimista", description: "Capas ciruela y humo." },
-    { value: "guardabosques", label: "Guardabosques", description: "Verdes apagados." },
-  ] satisfies AvatarOption<AvatarConfig["outfit"]>[],
   accessory: [
-    { value: "ninguno", label: "Ninguno", description: "Sin objeto adicional." },
-    { value: "libro", label: "Libro", description: "Grimorio de estudio." },
-    { value: "te", label: "Té", description: "Taza de pausa." },
-    { value: "pluma", label: "Pluma", description: "Anotación rápida." },
-    { value: "linterna", label: "Linterna", description: "Luz cálida tenue." },
+    { value: "ninguno", label: "Sin accesorio", description: "Sin complemento extra." },
+    { value: "bigote", label: "Bigote", description: "Detalle facial sencillo." },
+    { value: "barba-corta", label: "Barba corta", description: "Sombra compacta." },
+    { value: "barbarian", label: "Casco bárbaro", description: "Yelmo abierto con remate agresivo." },
+    { value: "barbarian-nasal", label: "Casco bárbaro nasal", description: "Protección frontal con nasal." },
+    { value: "barbarian-viking", label: "Casco vikingo", description: "Perfil bárbaro con alas." },
+    { value: "barbuta", label: "Barbuta", description: "Yelmo medieval cerrado." },
+    { value: "barbuta-simple", label: "Barbuta simple", description: "Barbuta ligera." },
+    { value: "close", label: "Casco cerrado", description: "Frontal más protegido." },
+    { value: "flattop", label: "Flat top", description: "Casco de copa plana." },
+    { value: "greathelm", label: "Greathelm", description: "Yelmo pesado de placa." },
+    { value: "nasal", label: "Casco nasal", description: "Protección con nasal clásico." },
+    { value: "spangenhelm", label: "Spangenhelm", description: "Casco segmentado." },
+    { value: "spangenhelm-viking", label: "Spangenhelm vikingo", description: "Variante nórdica." },
+    { value: "sugarloaf", label: "Sugarloaf", description: "Yelmo puntiagudo." },
+    { value: "sugarloaf-simple", label: "Sugarloaf simple", description: "Versión ligera." },
   ] satisfies AvatarOption<AvatarConfig["accessory"]>[],
-  expression: [
-    { value: "sereno", label: "Sereno", description: "Reposado y neutral." },
-    { value: "despierto", label: "Despierto", description: "Ojos abiertos y alerta." },
-    { value: "picaro", label: "Pícaro", description: "Ceja alta y sonrisa leve." },
-  ] satisfies AvatarOption<AvatarConfig["expression"]>[],
+  upper: [
+    { value: "shirt-01-longsleeve", label: "Camisa larga 01", description: "Manga larga básica." },
+    { value: "shirt-02-vneck-longsleeve", label: "Camisa larga 02", description: "Manga larga con pico." },
+    { value: "shirt-03-scoop-longsleeve", label: "Camisa larga 03", description: "Manga larga redondeada." },
+    { value: "shirt-04-tee", label: "Camiseta 01", description: "Camiseta recta." },
+    { value: "shirt-05-vneck-tee", label: "Camiseta 02", description: "Camiseta con pico." },
+    { value: "shirt-06-scoop-tee", label: "Camiseta 03", description: "Camiseta redondeada." },
+  ] satisfies AvatarOption<AvatarConfig["upper"]>[],
+  upperColor: garmentColorOptions,
+  lower: [
+    { value: "pants-01-hose", label: "Pantalón 01", description: "Base tipo hose." },
+    { value: "pants-02-leggings", label: "Pantalón 02", description: "Leggings." },
+    { value: "pants-03-pants", label: "Pantalón 03", description: "Pantalón recto." },
+    { value: "pants-04-cuffed", label: "Pantalón 04", description: "Pantalón remangado." },
+    { value: "pants-05-overalls", label: "Pantalón 05", description: "Mono/overalls." },
+  ] satisfies AvatarOption<AvatarConfig["lower"]>[],
+  lowerColor: garmentColorOptions,
+  socks: [
+    { value: "socks-01-ankle", label: "Calcetines bajos", description: "Tobilleros." },
+    { value: "socks-02-high", label: "Calcetines altos", description: "Altos hasta media pierna." },
+  ] satisfies AvatarOption<AvatarConfig["socks"]>[],
+  socksColor: garmentColorOptions,
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+const avatarOptionSets = {
+  sex: new Set(avatarOptions.sex.map((option) => option.value)),
+  skinTone: new Set(avatarOptions.skinTone.map((option) => option.value)),
+  hairStyle: new Set(avatarOptions.hairStyle.map((option) => option.value)),
+  hairColor: new Set(avatarOptions.hairColor.map((option) => option.value)),
+  accessory: new Set(avatarOptions.accessory.map((option) => option.value)),
+  upper: new Set(avatarOptions.upper.map((option) => option.value)),
+  upperColor: new Set(avatarOptions.upperColor.map((option) => option.value)),
+  lower: new Set(avatarOptions.lower.map((option) => option.value)),
+  lowerColor: new Set(avatarOptions.lowerColor.map((option) => option.value)),
+  socks: new Set(avatarOptions.socks.map((option) => option.value)),
+  socksColor: new Set(avatarOptions.socksColor.map((option) => option.value)),
+};
+
+const legacyOutfitPreset = {
+  escriba: {
+    upper: "shirt-01-longsleeve",
+    lower: "pants-03-pants",
+    socks: "socks-01-ankle",
+  },
+  alquimista: {
+    upper: "shirt-02-vneck-longsleeve",
+    lower: "pants-04-cuffed",
+    socks: "socks-02-high",
+  },
+  guardabosques: {
+    upper: "shirt-04-tee",
+    lower: "pants-05-overalls",
+    socks: "socks-02-high",
+  },
+} as const;
+
+function normalizeAvatarValue<T extends string>(value: unknown, allowed: Set<T>, fallback: T) {
+  if (typeof value === "string" && allowed.has(value as T)) {
+    return value as T;
+  }
+
+  return fallback;
+}
+
+export function normalizeAvatarConfig(value: unknown): AvatarConfig {
+  const raw = isRecord(value) ? value : {};
+  const legacyOutfit =
+    typeof raw.outfit === "string" && raw.outfit in legacyOutfitPreset
+      ? legacyOutfitPreset[raw.outfit as keyof typeof legacyOutfitPreset]
+      : legacyOutfitPreset.escriba;
+
+  const fallback: AvatarConfig = {
+    sex:
+      raw.base === "viajera" ? "femenino" : normalizeAvatarValue(raw.sex, avatarOptionSets.sex, "masculino"),
+    skinTone:
+      raw.skinTone === "marfil"
+        ? "ivory"
+        : raw.skinTone === "miel"
+          ? "amber"
+          : raw.skinTone === "bronce"
+            ? "bronze"
+            : raw.skinTone === "umbra"
+              ? "sepia"
+              : normalizeAvatarValue(raw.skinTone, avatarOptionSets.skinTone, "amber"),
+    hairStyle:
+      raw.hairStyle === "corto"
+        ? "short-02-parted"
+        : raw.hairStyle === "ondas"
+          ? "medium-02-curly"
+          : raw.hairStyle === "coleta"
+            ? "medium-04-bangs-bun"
+            : raw.hairStyle === "capucha"
+              ? "short-06-balding"
+              : normalizeAvatarValue(raw.hairStyle, avatarOptionSets.hairStyle, "short-02-parted"),
+    hairColor:
+      raw.hairColor === "obsidiana"
+        ? "black"
+        : raw.hairColor === "castano"
+          ? "brown"
+          : raw.hairColor === "cobre"
+            ? "orange"
+            : raw.hairColor === "plata"
+              ? "white"
+              : normalizeAvatarValue(raw.hairColor, avatarOptionSets.hairColor, "brown"),
+    accessory:
+      raw.facialHair === "bigote"
+        ? "bigote"
+        : raw.facialHair === "barba-corta"
+          ? "barba-corta"
+          : normalizeAvatarValue(raw.accessory, avatarOptionSets.accessory, "ninguno"),
+    upper: normalizeAvatarValue(raw.upper, avatarOptionSets.upper, legacyOutfit.upper),
+    upperColor: normalizeAvatarValue(raw.upperColor, avatarOptionSets.upperColor, "smoke"),
+    lower: normalizeAvatarValue(raw.lower, avatarOptionSets.lower, legacyOutfit.lower),
+    lowerColor: normalizeAvatarValue(raw.lowerColor, avatarOptionSets.lowerColor, "umber"),
+    socks: normalizeAvatarValue(raw.socks, avatarOptionSets.socks, legacyOutfit.socks),
+    socksColor: normalizeAvatarValue(raw.socksColor, avatarOptionSets.socksColor, "cream"),
+  };
+
+  if (fallback.accessory !== "ninguno") {
+    return fallback;
+  }
+
+  return {
+    ...fallback,
+    accessory:
+      raw.accessory === "linterna" || raw.accessory === "libro" || raw.accessory === "te" || raw.accessory === "pluma"
+        ? "ninguno"
+        : fallback.accessory,
+  };
+}
 
 export const achievementDefinitions: AchievementDefinition[] = [
   {
@@ -194,32 +560,38 @@ const STORAGE_KEY = "scholars-sanctuary-state-v3";
 const CHANNEL_NAME = "scholars-sanctuary-live";
 const DEFAULT_PRIVATE_DESCRIPTION = "Sala reservada para amistades invitadas y foco compartido.";
 
-const guestAvatar: AvatarConfig = {
-  base: "archivo",
-  skinTone: "miel",
-  hairStyle: "corto",
-  hairColor: "castano",
-  facialHair: "ninguno",
-  outfit: "escriba",
-  accessory: "libro",
-  expression: "sereno",
-};
+const guestAvatar: AvatarConfig = normalizeAvatarConfig({
+  sex: "masculino",
+  skinTone: "amber",
+  hairStyle: "short-02-parted",
+  hairColor: "brown",
+  accessory: "ninguno",
+  upper: "shirt-01-longsleeve",
+  upperColor: "smoke",
+  lower: "pants-03-pants",
+  lowerColor: "umber",
+  socks: "socks-01-ankle",
+  socksColor: "cream",
+});
 
 const demoProfiles: Profile[] = [
   {
     id: "demo-lyra",
     displayName: "Lyra de las estanterías",
     handle: "@lyra",
-    avatar: {
-      base: "viajera",
-      skinTone: "marfil",
-      hairStyle: "coleta",
-      hairColor: "cobre",
-      facialHair: "ninguno",
-      outfit: "guardabosques",
-      accessory: "pluma",
-      expression: "picaro",
-    },
+    avatar: normalizeAvatarConfig({
+      sex: "femenino",
+      skinTone: "ivory",
+      hairStyle: "medium-07-bob-side-part",
+      hairColor: "ruby",
+      accessory: "ninguno",
+      upper: "shirt-04-tee",
+      upperColor: "cerise",
+      lower: "pants-02-leggings",
+      lowerColor: "plum",
+      socks: "socks-02-high",
+      socksColor: "cream",
+    }),
     bio: "Lleva el pulso del archivo al amanecer.",
     createdAt: Date.now(),
     isDemo: true,
@@ -228,16 +600,19 @@ const demoProfiles: Profile[] = [
     id: "demo-bruno",
     displayName: "Bruno del campanario",
     handle: "@bruno",
-    avatar: {
-      base: "vigia",
-      skinTone: "bronce",
-      hairStyle: "ondas",
-      hairColor: "obsidiana",
-      facialHair: "bigote",
-      outfit: "alquimista",
-      accessory: "linterna",
-      expression: "despierto",
-    },
+    avatar: normalizeAvatarConfig({
+      sex: "masculino",
+      skinTone: "bronze",
+      hairStyle: "short-04-cowlick",
+      hairColor: "black",
+      accessory: "barbuta",
+      upper: "shirt-02-vneck-longsleeve",
+      upperColor: "blue-violet",
+      lower: "pants-04-cuffed",
+      lowerColor: "coffee",
+      socks: "socks-02-high",
+      socksColor: "cream",
+    }),
     bio: "Prefiere estudiar en silencio y descansar entre setos.",
     createdAt: Date.now(),
     isDemo: true,
@@ -246,16 +621,19 @@ const demoProfiles: Profile[] = [
     id: "demo-ines",
     displayName: "Inés de la mesa larga",
     handle: "@ines",
-    avatar: {
-      base: "archivo",
-      skinTone: "umbra",
-      hairStyle: "capucha",
-      hairColor: "plata",
-      facialHair: "ninguno",
-      outfit: "escriba",
-      accessory: "libro",
-      expression: "sereno",
-    },
+    avatar: normalizeAvatarConfig({
+      sex: "femenino",
+      skinTone: "sepia",
+      hairStyle: "medium-05-cornrows",
+      hairColor: "white",
+      accessory: "ninguno",
+      upper: "shirt-03-scoop-longsleeve",
+      upperColor: "forest",
+      lower: "pants-05-overalls",
+      lowerColor: "brown",
+      socks: "socks-01-ankle",
+      socksColor: "cream",
+    }),
     bio: "Siempre deja una cita marcada antes de dormir.",
     createdAt: Date.now(),
     isDemo: true,
@@ -279,7 +657,7 @@ function createInitialState(): SanctuaryState {
   );
 
   return {
-    version: 4,
+    version: 5,
     authMode: "guest",
     currentUserId: "guest-current",
     currentRoomCode: PUBLIC_ROOM_CODE,
@@ -394,11 +772,20 @@ function readStoredState() {
 
   try {
     const parsed = JSON.parse(raw) as SanctuaryState;
-    if (parsed.version !== 3 && parsed.version !== 4) {
+    if (parsed.version !== 3 && parsed.version !== 4 && parsed.version !== 5) {
       return createInitialState();
     }
 
-    parsed.version = 4;
+    parsed.version = 5;
+    parsed.profiles = Object.fromEntries(
+      Object.entries(parsed.profiles ?? {}).map(([profileId, profile]) => [
+        profileId,
+        {
+          ...profile,
+          avatar: normalizeAvatarConfig(profile.avatar),
+        },
+      ]),
+    );
     parsed.timer.focusDurationSeconds = parsed.timer.focusDurationSeconds ?? FOCUS_SECONDS;
     parsed.timer.breakDurationSeconds = parsed.timer.breakDurationSeconds ?? BREAK_SECONDS;
     parsed.timer.durationSeconds =

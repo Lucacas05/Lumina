@@ -6,10 +6,11 @@ interface PixelAvatarProps {
   avatar: AvatarConfig;
   state?: PresenceState;
   name?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "xxl";
   highlighted?: boolean;
   showStatusBadge?: boolean;
-  showAccessoryBadge?: boolean;
+  stage?: "panel" | "plain";
+  anchor?: "bottom" | "center";
 }
 
 interface SizeMetrics {
@@ -18,7 +19,6 @@ interface SizeMetrics {
   spriteScale: number;
   badgeSize: number;
   labelClass: string;
-  accessoryBox: number;
   bottomOffset: number;
 }
 
@@ -29,42 +29,66 @@ const stateIcons = {
   offline: MoonStar,
 } as const;
 
+const hairTones = {
+  "ash-brown": "#7b5a47",
+  black: "#241c1a",
+  blonde: "#dcb66b",
+  blue: "#4d6eb4",
+  brown: "#644634",
+  chestnut: "#7a452d",
+  gray: "#a2a5ab",
+  green: "#56714b",
+  orange: "#bf6c2b",
+  pink: "#cf8ba5",
+  platinum: "#d7dce0",
+  raven: "#1f1820",
+  red: "#b03d31",
+  ruby: "#7c3348",
+  teal: "#2f7a78",
+  violet: "#6e589c",
+  white: "#ececec",
+} as const;
+
 const sizeMetrics: Record<NonNullable<PixelAvatarProps["size"]>, SizeMetrics> = {
   sm: {
     frameWidth: 86,
     frameHeight: 108,
-    spriteScale: 1.2,
-    badgeSize: 24,
+    spriteScale: 1.18,
+    badgeSize: 22,
     labelClass: "text-[9px]",
-    accessoryBox: 28,
     bottomOffset: 6,
   },
   md: {
     frameWidth: 108,
     frameHeight: 142,
-    spriteScale: 1.52,
+    spriteScale: 1.5,
     badgeSize: 28,
     labelClass: "text-[10px]",
-    accessoryBox: 34,
     bottomOffset: 8,
   },
   lg: {
     frameWidth: 164,
     frameHeight: 208,
-    spriteScale: 2.42,
+    spriteScale: 2.38,
     badgeSize: 34,
     labelClass: "text-xs",
-    accessoryBox: 40,
     bottomOffset: 10,
   },
   xl: {
-    frameWidth: 226,
-    frameHeight: 282,
-    spriteScale: 3.3,
-    badgeSize: 42,
+    frameWidth: 228,
+    frameHeight: 284,
+    spriteScale: 3.28,
+    badgeSize: 40,
     labelClass: "text-xs",
-    accessoryBox: 52,
     bottomOffset: 12,
+  },
+  xxl: {
+    frameWidth: 332,
+    frameHeight: 388,
+    spriteScale: 4.55,
+    badgeSize: 44,
+    labelClass: "text-sm",
+    bottomOffset: 18,
   },
 };
 
@@ -73,73 +97,28 @@ function SpriteSheetLayer({
   sheetWidth,
   sheetHeight,
   scale,
+  frameX,
+  frameY,
   className = "",
 }: {
   src: string;
   sheetWidth: number;
   sheetHeight: number;
   scale: number;
+  frameX?: number;
+  frameY?: number;
   className?: string;
 }) {
-  const frameX = sheetWidth === 192 ? 64 * scale : 0;
-  const frameY = 128 * scale;
-
   return (
     <div
       className={`absolute inset-0 bg-no-repeat ${className}`}
       style={{
         backgroundImage: `url(${src})`,
         backgroundSize: `${sheetWidth * scale}px ${sheetHeight * scale}px`,
-        backgroundPosition: `-${frameX}px -${frameY}px`,
+        backgroundPosition: `-${(frameX ?? 0) * scale}px -${(frameY ?? 0) * scale}px`,
         imageRendering: "pixelated",
       }}
     />
-  );
-}
-
-function AccessoryBadge({
-  accessory,
-  size,
-}: {
-  accessory: AvatarConfig["accessory"];
-  size: number;
-}) {
-  if (accessory === "ninguno") {
-    return null;
-  }
-
-  return (
-    <div
-      className="absolute bottom-6 -right-1 flex items-center justify-center rounded-none border-2 border-surface-container-highest bg-surface-container-low shadow-[0_4px_0_rgba(0,0,0,0.22)]"
-      style={{ width: size, height: size }}
-    >
-      {accessory === "libro" && (
-        <div className="relative h-[58%] w-[50%] border-2 border-[#3f2517] bg-[#7f5434]">
-          <div className="absolute inset-y-0 left-[24%] w-[2px] bg-[#f7d598]" />
-          <div className="absolute inset-x-[16%] top-[18%] h-[2px] bg-[#f7d598]/70" />
-        </div>
-      )}
-      {accessory === "te" && (
-        <div className="relative h-[54%] w-[56%]">
-          <div className="absolute bottom-0 left-[10%] h-[62%] w-[54%] rounded-b-[0.12rem] border-2 border-[#724b1d] bg-[#ddc49e]" />
-          <div className="absolute right-[4%] top-[18%] h-[36%] w-[20%] rounded-r-full border-2 border-[#724b1d]" />
-          <div className="absolute left-[32%] top-0 h-[20%] w-[2px] bg-white/60" />
-        </div>
-      )}
-      {accessory === "pluma" && (
-        <div className="relative h-[66%] w-[34%] rotate-12">
-          <div className="absolute inset-0 rounded-full bg-[#ddd7e6]" />
-          <div className="absolute bottom-[-10%] left-1/2 h-[46%] w-[2px] -translate-x-1/2 bg-[#7a4b2b]" />
-        </div>
-      )}
-      {accessory === "linterna" && (
-        <div className="relative h-[64%] w-[48%]">
-          <div className="absolute inset-x-[18%] top-0 h-[18%] rounded-t-full border-2 border-[#714100]" />
-          <div className="absolute inset-x-0 top-[18%] bottom-0 rounded-[0.12rem] border-2 border-[#714100] bg-[#ffdc9a]" />
-          <div className="absolute inset-x-[24%] top-[34%] bottom-[10%] bg-[#ffb961]/70" />
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -150,63 +129,24 @@ function FaceOverlay({
   avatar: AvatarConfig;
   scale: number;
 }) {
+  const hairTone = hairTones[avatar.hairColor];
   const unit = scale;
-  const eyeColor = avatar.expression === "despierto" ? "#1b1412" : "#2d231f";
-  const mouthColor = avatar.expression === "picaro" ? "#6d3925" : "#5b3021";
-  const facialColor =
-    avatar.hairColor === "plata"
-      ? "#cfd6db"
-      : avatar.hairColor === "cobre"
-        ? "#92512d"
-        : avatar.hairColor === "obsidiana"
-          ? "#251a1b"
-          : "#5b4333";
 
   return (
     <>
       <span
-        className="absolute rounded-none"
-        style={{
-          left: 24 * unit,
-          top: 17 * unit,
-          width: 4 * unit,
-          height: avatar.expression === "despierto" ? 3 * unit : 2 * unit,
-          backgroundColor: eyeColor,
-        }}
+        className="absolute rounded-none bg-[#2a201d]"
+        style={{ left: 24 * unit, top: 17 * unit, width: 4 * unit, height: 2 * unit }}
       />
       <span
-        className="absolute rounded-none"
-        style={{
-          left: 36 * unit,
-          top: 17 * unit,
-          width: 4 * unit,
-          height: avatar.expression === "despierto" ? 3 * unit : 2 * unit,
-          backgroundColor: eyeColor,
-        }}
+        className="absolute rounded-none bg-[#2a201d]"
+        style={{ left: 36 * unit, top: 17 * unit, width: 4 * unit, height: 2 * unit }}
       />
-      {avatar.expression === "picaro" && (
-        <span
-          className="absolute rounded-none bg-[#2f231f]"
-          style={{
-            left: 35 * unit,
-            top: 13 * unit,
-            width: 5 * unit,
-            height: unit,
-          }}
-        />
-      )}
       <span
-        className="absolute rounded-none"
-        style={{
-          left: avatar.expression === "picaro" ? 29 * unit : 28 * unit,
-          top: avatar.expression === "despierto" ? 25 * unit : 26 * unit,
-          width: avatar.expression === "picaro" ? 8 * unit : 6 * unit,
-          height: unit,
-          backgroundColor: mouthColor,
-          transform: avatar.expression === "picaro" ? `skewX(-25deg)` : undefined,
-        }}
+        className="absolute rounded-none bg-[#7b4d3e]"
+        style={{ left: 29 * unit, top: 26 * unit, width: 6 * unit, height: unit }}
       />
-      {avatar.facialHair === "bigote" && (
+      {avatar.accessory === "bigote" && (
         <span
           className="absolute rounded-none"
           style={{
@@ -214,57 +154,23 @@ function FaceOverlay({
             top: 22 * unit,
             width: 10 * unit,
             height: 2 * unit,
-            backgroundColor: facialColor,
+            backgroundColor: hairTone,
           }}
         />
       )}
-      {avatar.facialHair === "barba-corta" && (
+      {avatar.accessory === "barba-corta" && (
         <span
           className="absolute rounded-b-[0.18rem]"
           style={{
             left: 26 * unit,
-            top: 23 * unit,
+            top: 22 * unit,
             width: 12 * unit,
-            height: 6 * unit,
-            backgroundColor: facialColor,
+            height: 7 * unit,
+            backgroundColor: hairTone,
           }}
         />
       )}
     </>
-  );
-}
-
-function HoodOverlay({
-  color,
-  scale,
-}: {
-  color: string;
-  scale: number;
-}) {
-  const unit = scale;
-
-  return (
-    <div
-      className="absolute"
-      style={{
-        left: 17 * unit,
-        top: 6 * unit,
-        width: 30 * unit,
-        height: 26 * unit,
-      }}
-    >
-      <div
-        className="absolute inset-0 rounded-t-[1rem]"
-        style={{
-          background: color,
-          clipPath: "polygon(0 18%, 18% 0, 82% 0, 100% 18%, 100% 100%, 0 100%)",
-        }}
-      />
-      <div
-        className="absolute left-[18%] top-[16%] h-[60%] w-[64%] rounded-t-full bg-[#1a1311]"
-        style={{ opacity: 0.26 }}
-      />
-    </div>
   );
 }
 
@@ -275,27 +181,38 @@ export function PixelAvatar({
   size = "md",
   highlighted = false,
   showStatusBadge = true,
-  showAccessoryBadge = true,
+  stage = "panel",
+  anchor = "bottom",
 }: PixelAvatarProps) {
   const StateIcon = stateIcons[state];
   const metrics = sizeMetrics[size];
   const manifest = getAvatarArtManifest(avatar);
-  const spriteScale = metrics.spriteScale * (avatar.base === "vigia" ? 1.05 : avatar.base === "viajera" ? 0.98 : 1);
+  const spriteScale = metrics.spriteScale;
   const spriteSize = 64 * spriteScale;
   const stageLeft = (metrics.frameWidth - spriteSize) / 2;
-  const stageTop = metrics.frameHeight - spriteSize - metrics.bottomOffset;
+  const stageTop =
+    anchor === "center"
+      ? (metrics.frameHeight - spriteSize) / 2
+      : metrics.frameHeight - spriteSize - metrics.bottomOffset;
+  const showHair = manifest.accessoryKind !== "helmet";
+  const showPanel = stage === "panel";
 
   return (
     <div className="relative" style={{ width: metrics.frameWidth, height: metrics.frameHeight }}>
-      <div className="absolute inset-x-[12%] bottom-1 h-5 rounded-full bg-black/35 blur-md" />
+      {showPanel || anchor === "bottom" ? (
+        <div
+          className={`absolute inset-x-[14%] bottom-1 h-5 rounded-full ${
+            showPanel ? "bg-black/35 blur-md" : "bg-black/18 blur-sm"
+          }`}
+        />
+      ) : null}
       <div
-        className="absolute inset-x-[10%] bottom-4 rounded-[1rem] border border-primary/20 bg-[radial-gradient(circle_at_50%_14%,rgba(255,190,110,0.22),transparent_44%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(24,18,16,0.2))]"
-        style={{ top: metrics.frameHeight * 0.08 }}
-      />
-
-      <div
-        className={`absolute rounded-[1rem] border-2 border-surface-container-highest bg-surface-container/60 shadow-[0_12px_0_rgba(0,0,0,0.18)] ${
-          highlighted ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : ""
+        className={`absolute ${
+          showPanel
+            ? "rounded-[1rem] border border-surface-container-highest/80 bg-surface-container/50 shadow-[0_12px_0_rgba(0,0,0,0.16)]"
+            : "bg-transparent"
+        } ${
+          highlighted ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-surface" : ""
         }`}
         style={{
           left: stageLeft,
@@ -305,11 +222,13 @@ export function PixelAvatar({
           imageRendering: "pixelated",
         }}
       >
-        {manifest.hairBack ? (
+        {showHair && manifest.hairBack ? (
           <SpriteSheetLayer
             src={manifest.hairBack.src}
             sheetWidth={manifest.hairBack.sheetWidth}
             sheetHeight={manifest.hairBack.sheetHeight}
+            frameX={manifest.hairBack.frameX}
+            frameY={manifest.hairBack.frameY}
             scale={spriteScale}
           />
         ) : null}
@@ -317,51 +236,74 @@ export function PixelAvatar({
           src={manifest.body.src}
           sheetWidth={manifest.body.sheetWidth}
           sheetHeight={manifest.body.sheetHeight}
+          frameX={manifest.body.frameX}
+          frameY={manifest.body.frameY}
           scale={spriteScale}
         />
         <SpriteSheetLayer
-          src={manifest.pants.src}
-          sheetWidth={manifest.pants.sheetWidth}
-          sheetHeight={manifest.pants.sheetHeight}
+          src={manifest.socks.src}
+          sheetWidth={manifest.socks.sheetWidth}
+          sheetHeight={manifest.socks.sheetHeight}
+          frameX={manifest.socks.frameX}
+          frameY={manifest.socks.frameY}
           scale={spriteScale}
         />
         <SpriteSheetLayer
-          src={manifest.shoes.src}
-          sheetWidth={manifest.shoes.sheetWidth}
-          sheetHeight={manifest.shoes.sheetHeight}
+          src={manifest.lower.src}
+          sheetWidth={manifest.lower.sheetWidth}
+          sheetHeight={manifest.lower.sheetHeight}
+          frameX={manifest.lower.frameX}
+          frameY={manifest.lower.frameY}
           scale={spriteScale}
         />
         <SpriteSheetLayer
-          src={manifest.shirt.src}
-          sheetWidth={manifest.shirt.sheetWidth}
-          sheetHeight={manifest.shirt.sheetHeight}
+          src={manifest.upper.src}
+          sheetWidth={manifest.upper.sheetWidth}
+          sheetHeight={manifest.upper.sheetHeight}
+          frameX={manifest.upper.frameX}
+          frameY={manifest.upper.frameY}
           scale={spriteScale}
         />
         <SpriteSheetLayer
           src={manifest.head.src}
           sheetWidth={manifest.head.sheetWidth}
           sheetHeight={manifest.head.sheetHeight}
+          frameX={manifest.head.frameX}
+          frameY={manifest.head.frameY}
           scale={spriteScale}
         />
         <FaceOverlay avatar={avatar} scale={spriteScale} />
-        {manifest.hairFront ? (
+        {showHair && manifest.hairFront ? (
           <SpriteSheetLayer
             src={manifest.hairFront.src}
             sheetWidth={manifest.hairFront.sheetWidth}
             sheetHeight={manifest.hairFront.sheetHeight}
+            frameX={manifest.hairFront.frameX}
+            frameY={manifest.hairFront.frameY}
             scale={spriteScale}
           />
         ) : null}
-        {manifest.hoodColor ? <HoodOverlay color={manifest.hoodColor} scale={spriteScale} /> : null}
+        {manifest.accessoryLayer ? (
+          <SpriteSheetLayer
+            src={manifest.accessoryLayer.src}
+            sheetWidth={manifest.accessoryLayer.sheetWidth}
+            sheetHeight={manifest.accessoryLayer.sheetHeight}
+            frameX={manifest.accessoryLayer.frameX}
+            frameY={manifest.accessoryLayer.frameY}
+            scale={spriteScale}
+          />
+        ) : null}
       </div>
 
-      <div
-        className="absolute left-1/2 top-5 h-10 -translate-x-1/2 rounded-full blur-2xl"
-        style={{
-          width: metrics.frameWidth * 0.56,
-          backgroundColor: `${manifest.accent.trim}25`,
-        }}
-      />
+      {showPanel ? (
+        <div
+          className="absolute left-1/2 top-6 h-12 -translate-x-1/2 rounded-full blur-3xl"
+          style={{
+            width: metrics.frameWidth * 0.46,
+            backgroundColor: `${manifest.accent.trim}25`,
+          }}
+        />
+      ) : null}
 
       {showStatusBadge ? (
         <div
@@ -376,8 +318,6 @@ export function PixelAvatar({
           />
         </div>
       ) : null}
-
-      {showAccessoryBadge ? <AccessoryBadge accessory={avatar.accessory} size={metrics.accessoryBox} /> : null}
 
       {name ? (
         <div

@@ -13,23 +13,109 @@ interface DrawAvatarOptions {
 }
 
 const skinTones = {
-  marfil: "#f4d2b7",
-  miel: "#d9a16a",
-  bronce: "#9d6841",
-  umbra: "#5e3b27",
+  amber: "#d8aa78",
+  bronze: "#b5784e",
+  brown: "#915d3e",
+  chocolate: "#734433",
+  coffee: "#604136",
+  cream: "#f3d8b9",
+  ivory: "#f7e4c8",
+  leather: "#9a6a4b",
+  peach: "#efc1a2",
+  sepia: "#6d4635",
+  tan: "#bb865f",
 } as const;
 
 const hairTones = {
-  obsidiana: "#22181b",
-  castano: "#5d4030",
-  cobre: "#9a4d1b",
-  plata: "#d1d5db",
+  "ash-brown": "#7b5a47",
+  black: "#241c1a",
+  blonde: "#dcb66b",
+  blue: "#4d6eb4",
+  brown: "#644634",
+  chestnut: "#7a452d",
+  gray: "#a2a5ab",
+  green: "#56714b",
+  orange: "#bf6c2b",
+  pink: "#cf8ba5",
+  platinum: "#d7dce0",
+  raven: "#1f1820",
+  red: "#b03d31",
+  ruby: "#7c3348",
+  teal: "#2f7a78",
+  violet: "#6e589c",
+  white: "#ececec",
 } as const;
 
-const outfitTones = {
-  escriba: { primary: "#88603c", trim: "#ffb961", shadow: "#5f3c22" },
-  alquimista: { primary: "#5b3e63", trim: "#e7bdb1", shadow: "#36203e" },
-  guardabosques: { primary: "#35523a", trim: "#add0a8", shadow: "#223526" },
+const garmentTones = {
+  amber: "#b8782d",
+  amethyst: "#6a4a8c",
+  barberry: "#7a2338",
+  black: "#262223",
+  blue: "#3d69a6",
+  "blue-violet": "#5650a2",
+  bronze: "#98714f",
+  brown: "#72503b",
+  "burnt-orange": "#b95c23",
+  "burnt-umber": "#7a4b32",
+  cerise: "#a13668",
+  chocolate: "#5b3323",
+  coffee: "#5d4336",
+  cornflower: "#6d85d5",
+  cream: "#d8c5a3",
+  cyan: "#3e9ca7",
+  fern: "#4c7a45",
+  forest: "#355a3d",
+  gray: "#6f7075",
+  green: "#4a8244",
+  ice: "#95d3eb",
+  indigo: "#433f7e",
+  ivory: "#efe7d5",
+  lavender: "#927eb7",
+  leather: "#886048",
+  mustard: "#9e8130",
+  navy: "#2e446e",
+  neptune: "#2f6a78",
+  olivine: "#728b4d",
+  orange: "#c36b22",
+  peach: "#d8a38a",
+  pink: "#c77ea4",
+  plum: "#69415a",
+  red: "#a53a36",
+  sepia: "#6a4d3f",
+  silver: "#9ca5b0",
+  smoke: "#8b8583",
+  spring: "#69a04f",
+  swamp: "#536246",
+  tan: "#b18462",
+  tumeric: "#b78e28",
+  umber: "#694a39",
+  white: "#f3f3f1",
+  yellow: "#d6b730",
+} as const;
+
+const upperTones = {
+  "shirt-01-longsleeve": { primary: "#7a5638", trim: "#e9c48e", shadow: "#4d321f" },
+  "shirt-02-vneck-longsleeve": { primary: "#5f456f", trim: "#dcbde7", shadow: "#34253d" },
+  "shirt-03-scoop-longsleeve": { primary: "#6c4c45", trim: "#f0c5ae", shadow: "#43302a" },
+  "shirt-04-tee": { primary: "#405f45", trim: "#cde4b8", shadow: "#243628" },
+  "shirt-05-vneck-tee": { primary: "#516677", trim: "#d7e5f3", shadow: "#31404c" },
+  "shirt-06-scoop-tee": { primary: "#8b6047", trim: "#f2cb95", shadow: "#5e3d2b" },
+} as const;
+
+const helmetTones = {
+  barbarian: "#98704e",
+  "barbarian-nasal": "#8d8f96",
+  "barbarian-viking": "#8f6b49",
+  barbuta: "#8d9096",
+  "barbuta-simple": "#9b9ca3",
+  close: "#868a92",
+  flattop: "#a49986",
+  greathelm: "#7f848c",
+  nasal: "#8f9099",
+  spangenhelm: "#8b887d",
+  "spangenhelm-viking": "#8d8368",
+  sugarloaf: "#8d9298",
+  "sugarloaf-simple": "#a2a5ab",
 } as const;
 
 function px(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) {
@@ -37,50 +123,54 @@ function px(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
 }
 
-function drawAccessory(
-  ctx: CanvasRenderingContext2D,
-  avatar: AvatarConfig,
-  x: number,
-  y: number,
-  facing: Facing,
-  trimColor: string,
-) {
-  const offsetX = facing === "left" ? -8 : facing === "right" ? 8 : 7;
-  const offsetY = facing === "up" ? 1 : 3;
-  const baseX = Math.round(x + offsetX);
-  const baseY = Math.round(y + offsetY);
+function drawAccessory(ctx: CanvasRenderingContext2D, avatar: AvatarConfig, x: number, y: number, facing: Facing) {
+  const tone = hairTones[avatar.hairColor];
+  const baseX = Math.round(x - 4 + (facing === "left" ? -1 : facing === "right" ? 1 : 0));
+  const baseY = Math.round(y - 24);
 
-  switch (avatar.accessory) {
-    case "libro":
-      px(ctx, baseX, baseY, 6, 8, "#6d4528");
-      px(ctx, baseX + 1, baseY + 1, 1, 6, trimColor);
-      px(ctx, baseX + 3, baseY + 1, 2, 1, "#f6d59c");
-      break;
-    case "te":
-      px(ctx, baseX, baseY + 2, 5, 4, "#d4b88a");
-      px(ctx, baseX + 4, baseY + 2, 2, 3, "#8c693e");
-      px(ctx, baseX + 2, baseY, 1, 2, "#f2efe9");
-      break;
-    case "pluma":
-      px(ctx, baseX + 2, baseY, 2, 7, "#e8e1f0");
-      px(ctx, baseX + 1, baseY + 5, 1, 3, "#8a5a38");
-      break;
-    case "linterna":
-      px(ctx, baseX + 1, baseY, 3, 2, "#8a5a38");
-      px(ctx, baseX, baseY + 2, 5, 6, "#f7d191");
-      px(ctx, baseX + 1, baseY + 3, 3, 3, "#ffbf62");
-      break;
-    default:
-      break;
+  if (avatar.accessory === "bigote") {
+    px(ctx, baseX + 3, baseY + 12, 6, 1, tone);
+    return;
+  }
+
+  if (avatar.accessory === "barba-corta") {
+    px(ctx, baseX + 2, baseY + 12, 8, 3, tone);
+    px(ctx, baseX + 4, baseY + 15, 4, 1, tone);
+    return;
+  }
+
+  if (avatar.accessory === "ninguno") {
+    return;
+  }
+
+  const helmetTone = helmetTones[avatar.accessory];
+  px(ctx, baseX + 1, baseY + 2, 10, 5, helmetTone);
+  px(ctx, baseX, baseY + 5, 12, 4, helmetTone);
+  px(ctx, baseX + 2, baseY + 9, 8, 3, "#2d2421");
+  if (
+    avatar.accessory === "barbarian-viking" ||
+    avatar.accessory === "spangenhelm-viking" ||
+    avatar.accessory === "barbarian"
+  ) {
+    px(ctx, baseX - 1, baseY + 4, 2, 3, "#ccb493");
+    px(ctx, baseX + 11, baseY + 4, 2, 3, "#ccb493");
+  }
+  if (avatar.accessory === "nasal" || avatar.accessory === "barbarian-nasal") {
+    px(ctx, baseX + 5, baseY + 7, 2, 5, "#a89f86");
   }
 }
 
 export function drawPixelAvatar(ctx: CanvasRenderingContext2D, options: DrawAvatarOptions) {
   const { avatar, state, pose, facing, x, y, tick, highlighted = false } = options;
-  const outfit = outfitTones[avatar.outfit];
+  const upper = {
+    ...upperTones[avatar.upper],
+    primary: garmentTones[avatar.upperColor],
+  };
+  const lower = garmentTones[avatar.lowerColor];
+  const socks = garmentTones[avatar.socksColor];
   const skin = skinTones[avatar.skinTone];
-  const hair = avatar.hairStyle === "capucha" ? outfit.trim : hairTones[avatar.hairColor];
-  const bodyWidth = avatar.base === "vigia" ? 11 : avatar.base === "viajera" ? 9 : 10;
+  const hair = hairTones[avatar.hairColor];
+  const bodyWidth = avatar.sex === "masculino" ? 11 : 9;
   const bodyX = Math.round(x - bodyWidth / 2);
   const bodyY = Math.round(y - (pose === "sitting" ? 14 : 18));
   const headX = Math.round(x - 4);
@@ -96,64 +186,54 @@ export function drawPixelAvatar(ctx: CanvasRenderingContext2D, options: DrawAvat
   }
 
   if (pose !== "sitting") {
-    px(ctx, x - 4 + walkOffset, y - 7, 3, 7, outfit.shadow);
-    px(ctx, x + 1 - walkOffset, y - 7, 3, 7, outfit.shadow);
+    px(ctx, x - 4 + walkOffset, y - 7, 3, 7, lower);
+    px(ctx, x + 1 - walkOffset, y - 7, 3, 7, lower);
+    px(ctx, x - 4 + walkOffset, y - 4, 3, 2, socks);
+    px(ctx, x + 1 - walkOffset, y - 4, 3, 2, socks);
   } else {
     px(ctx, x - 6, y - 5, 12, 4, "#4a3526");
-    px(ctx, x - 4, y - 1, 3, 3, outfit.shadow);
-    px(ctx, x + 1, y - 1, 3, 3, outfit.shadow);
+    px(ctx, x - 4, y - 1, 3, 3, lower);
+    px(ctx, x + 1, y - 1, 3, 3, lower);
   }
 
-  px(ctx, bodyX, bodyY + bob, bodyWidth, pose === "sitting" ? 10 : 12, outfit.primary);
-  px(ctx, bodyX + 1, bodyY + bob + 1, bodyWidth - 2, 2, outfit.trim);
-  px(ctx, x - 1, bodyY + bob + 2, 2, pose === "sitting" ? 8 : 10, outfit.shadow);
-
-  if (avatar.base === "vigia") {
-    px(ctx, bodyX - 1, bodyY + bob + 2, 2, 8, outfit.shadow);
-    px(ctx, bodyX + bodyWidth - 1, bodyY + bob + 2, 2, 8, outfit.shadow);
-  }
-
-  if (avatar.base === "viajera") {
-    px(ctx, bodyX + bodyWidth - 2, bodyY + bob + 10, 2, 2, outfit.trim);
-  }
+  px(ctx, bodyX, bodyY + bob, bodyWidth, pose === "sitting" ? 10 : 12, upper.primary);
+  px(ctx, bodyX + 1, bodyY + bob + 1, bodyWidth - 2, 2, upper.trim);
+  px(ctx, x - 1, bodyY + bob + 2, 2, pose === "sitting" ? 8 : 10, upper.shadow);
 
   px(ctx, headX, headY + bob, 8, 8, skin);
-  px(ctx, headX, headY + bob, 8, 3, hair);
 
-  if (avatar.hairStyle === "ondas") {
-    px(ctx, headX - 1, headY + bob + 2, 2, 4, hair);
-    px(ctx, headX + 7, headY + bob + 2, 2, 4, hair);
+  if (avatar.accessory === "ninguno" || avatar.accessory === "bigote" || avatar.accessory === "barba-corta") {
+    px(ctx, headX, headY + bob, 8, 3, hair);
+
+    if (avatar.hairStyle.startsWith("medium-")) {
+      px(ctx, headX - 1, headY + bob + 2, 2, 5, hair);
+      px(ctx, headX + 7, headY + bob + 2, 2, 5, hair);
+    }
+
+    if (avatar.hairStyle === "medium-04-bangs-bun") {
+      px(ctx, headX + 6, headY + bob - 1, 2, 2, hair);
+    }
+
+    if (avatar.hairStyle === "short-03-curly" || avatar.hairStyle === "medium-02-curly") {
+      px(ctx, headX - 1, headY + bob + 1, 1, 2, hair);
+      px(ctx, headX + 8, headY + bob + 1, 1, 2, hair);
+    }
+
+    if (avatar.hairStyle === "short-01-buzzcut" || avatar.hairStyle === "short-06-balding") {
+      px(ctx, headX + 1, headY + bob, 6, 2, hair);
+    }
   }
 
-  if (avatar.hairStyle === "coleta") {
-    px(ctx, headX + (facing === "left" ? 0 : 7), headY + bob + 3, 2, 6, hair);
-  }
+  px(ctx, headX + 2, headY + bob + 4, 1, 1, "#261a17");
+  px(ctx, headX + 5, headY + bob + 4, 1, 1, "#261a17");
+  px(ctx, headX + 3, headY + bob + 6, 2, 1, "#8a5a38");
 
-  if (avatar.hairStyle === "capucha") {
-    px(ctx, headX - 1, headY + bob, 10, 6, outfit.primary);
-    px(ctx, headX + 1, headY + bob + 2, 6, 3, hair);
-  }
-
-  const eyeColor = avatar.expression === "despierto" ? "#261a17" : "#4d3a33";
-  px(ctx, headX + 2, headY + bob + 4, 1, 1, eyeColor);
-  px(ctx, headX + 5, headY + bob + 4, 1, 1, eyeColor);
-  px(ctx, headX + 3, headY + bob + 6, 2, 1, avatar.expression === "picaro" ? outfit.trim : "#8a5a38");
-
-  if (avatar.facialHair === "bigote") {
-    px(ctx, headX + 2, headY + bob + 5, 4, 1, hair);
-  }
-
-  if (avatar.facialHair === "barba-corta") {
-    px(ctx, headX + 2, headY + bob + 5, 4, 2, hair);
-    px(ctx, headX + 3, headY + bob + 7, 2, 1, hair);
-  }
+  drawAccessory(ctx, avatar, x, y - (pose === "sitting" ? 10 : 13), facing);
 
   if (state === "studying") {
-    px(ctx, bodyX - 1, bodyY + bob + 5, 1, 5, outfit.shadow);
-    px(ctx, bodyX + bodyWidth, bodyY + bob + 5, 1, 5, outfit.shadow);
+    px(ctx, bodyX - 1, bodyY + bob + 5, 1, 5, upper.shadow);
+    px(ctx, bodyX + bodyWidth, bodyY + bob + 5, 1, 5, upper.shadow);
   }
-
-  drawAccessory(ctx, avatar, x, y - (pose === "sitting" ? 10 : 13), facing, outfit.trim);
 }
 
 export function drawSpeechBubble(ctx: CanvasRenderingContext2D, text: string, x: number, y: number) {

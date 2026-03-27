@@ -8,26 +8,66 @@ interface ItemModelPreviewProps {
 }
 
 const fallbackAvatar: AvatarConfig = {
-  base: "archivo",
-  skinTone: "miel",
-  hairStyle: "corto",
-  hairColor: "castano",
-  facialHair: "ninguno",
-  outfit: "escriba",
-  accessory: "libro",
-  expression: "sereno",
+  sex: "masculino",
+  skinTone: "amber",
+  hairStyle: "short-02-parted",
+  hairColor: "brown",
+  accessory: "ninguno",
+  upper: "shirt-01-longsleeve",
+  upperColor: "smoke",
+  lower: "pants-03-pants",
+  lowerColor: "umber",
+  socks: "socks-01-ankle",
+  socksColor: "cream",
 };
 
-export function ItemModelPreview({ field, value, avatar = fallbackAvatar }: ItemModelPreviewProps) {
-  const previewAvatar = {
+function buildPreviewAvatar(field: keyof AvatarConfig, value: string, avatar: AvatarConfig): AvatarConfig {
+  const previewAvatar: AvatarConfig = {
     ...avatar,
     [field]: value,
   } as AvatarConfig;
 
+  if (field !== "accessory") {
+    previewAvatar.accessory = "ninguno";
+  }
+
+  if (field === "sex") {
+    previewAvatar.sex = value as AvatarConfig["sex"];
+    previewAvatar.accessory = "ninguno";
+    previewAvatar.hairStyle = value === "femenino" ? "medium-01-page" : "short-02-parted";
+  }
+
+  if (field === "skinTone") {
+    previewAvatar.accessory = "ninguno";
+    previewAvatar.hairStyle = "short-02-parted";
+  }
+
+  if (field === "hairColor") {
+    previewAvatar.accessory = "ninguno";
+    previewAvatar.hairStyle = avatar.hairStyle === "short-06-balding" ? "short-02-parted" : avatar.hairStyle;
+  }
+
+  if (field === "hairStyle") {
+    previewAvatar.accessory = "ninguno";
+  }
+
+  if (field === "upper" || field === "lower" || field === "socks") {
+    previewAvatar.accessory = "ninguno";
+  }
+
+  if (field === "upperColor" || field === "lowerColor" || field === "socksColor") {
+    previewAvatar.accessory = "ninguno";
+  }
+
+  return previewAvatar;
+}
+
+export function ItemModelPreview({ field, value, avatar = fallbackAvatar }: ItemModelPreviewProps) {
+  const previewAvatar = buildPreviewAvatar(field, value, avatar);
+
   return (
-    <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-none border-2 border-surface-container-highest bg-[radial-gradient(circle_at_50%_16%,rgba(255,189,105,0.16),transparent_38%),linear-gradient(180deg,rgba(44,32,27,0.95),rgba(20,15,13,0.98))]">
-      <div className="absolute inset-x-3 bottom-1 h-3 rounded-full bg-black/35 blur-sm" />
-      <PixelAvatar avatar={previewAvatar} size="sm" showStatusBadge={false} />
+    <div className="relative flex h-36 w-full min-w-0 items-center justify-center overflow-hidden border border-outline-variant bg-[radial-gradient(circle_at_50%_18%,rgba(255,189,105,0.14),transparent_40%),linear-gradient(180deg,rgba(41,30,26,0.92),rgba(20,15,13,0.98))] px-3 py-3 sm:h-40">
+      <PixelAvatar avatar={previewAvatar} size="md" stage="plain" anchor="center" showStatusBadge={false} />
     </div>
   );
 }
