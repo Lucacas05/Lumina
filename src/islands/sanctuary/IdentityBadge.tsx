@@ -7,6 +7,7 @@ import {
   useSanctuaryStore,
   type RemoteAccountIdentity,
 } from "@/lib/sanctuary/store";
+import * as realtime from "@/lib/sanctuary/realtime";
 
 interface SessionUser extends RemoteAccountIdentity {
   avatarUrl: string | null;
@@ -75,6 +76,7 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
         }
 
         sanctuaryActions.connectGitHubAccount(payload.user);
+        realtime.connect();
 
         const snapshot = getFullState();
         const serializedSnapshot = JSON.stringify(snapshot);
@@ -159,6 +161,7 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
       })
         .then((response) => {
           if (response.status === 401) {
+            realtime.disconnect();
             sanctuaryActions.returnToAnonymousState();
             setSessionUser(null);
             lastSyncedStateRef.current = null;
@@ -194,6 +197,7 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
         window.clearTimeout(syncTimeoutRef.current);
       }
 
+      realtime.disconnect();
       sanctuaryActions.returnToAnonymousState();
       setSessionUser(null);
       lastSyncedStateRef.current = null;

@@ -14,6 +14,7 @@ import { StudyTimer } from "@/islands/StudyTimer";
 import { SanctuaryCanvasScene } from "@/islands/sanctuary/SanctuaryCanvasScene";
 import type { SanctuaryCanvasHandle } from "@/lib/sanctuary/canvas/types";
 import { toCanvasRemotePlayers } from "@/islands/sanctuary/canvasRoomHelpers";
+import * as realtime from "@/lib/sanctuary/realtime";
 
 interface SharedLibraryRoomProps {
   backgroundUrl: string;
@@ -84,6 +85,29 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
       return () => window.cancelAnimationFrame(frame);
     }
   }, [currentPresence?.message, currentPresence?.state]);
+
+  useEffect(() => {
+    if (!currentRoom || isAnonymous) return;
+
+    realtime.joinRoom(currentRoom.code);
+
+    return () => {
+      realtime.leaveRoom();
+    };
+  }, [currentRoom?.code, isAnonymous]);
+
+  useEffect(() => {
+    if (!currentPresence || isAnonymous) return;
+
+    const timer = sanctuary.timer;
+    realtime.sendPresenceUpdate(
+      currentPresence.state,
+      timer.phase,
+      timer.status,
+      timer.remainingSeconds,
+      currentPresence.message,
+    );
+  }, [currentPresence?.state, sanctuary.timer.status, sanctuary.timer.phase]);
 
   if (isAnonymous) {
     return (
