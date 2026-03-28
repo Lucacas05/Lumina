@@ -36,7 +36,7 @@ export function CurrentPulsePanel() {
   const summary = getCurrentProfileSummary(sanctuary);
   const activeRoom = getCurrentRoom(sanctuary);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const isGuest = sanctuary.authMode === "guest";
+  const isAnonymous = sanctuary.sessionState === "anonymous";
 
   useGsapReveal(rootRef);
 
@@ -44,10 +44,10 @@ export function CurrentPulsePanel() {
     <div ref={rootRef} className="relative overflow-hidden bg-surface-container-highest pixel-border">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,185,97,0.18),transparent_18%),radial-gradient(circle_at_74%_76%,rgba(173,208,168,0.12),transparent_18%)]" />
 
-      <div className={["relative flex flex-col gap-8 p-8 md:flex-row md:items-center", isGuest ? "blur-[5px]" : ""].join(" ")}>
+      <div className={["relative flex flex-col gap-8 p-8 md:flex-row md:items-center", isAnonymous ? "blur-[5px]" : ""].join(" ")}>
         <div className="flex justify-center md:block">
           <div className="relative flex h-48 w-48 items-center justify-center border-4 border-surface-container-highest bg-surface pixel-border-inset">
-            <PixelAvatar avatar={summary.profile.avatar} size="lg" highlighted={!isGuest} />
+            <PixelAvatar avatar={summary.profile.avatar} size="lg" highlighted={!isAnonymous} />
             <div className="absolute -bottom-4 bg-primary px-3 py-1 font-headline text-[10px] font-bold uppercase tracking-widest text-on-primary bezel-button">
               {getPulseBadge(summary)}
             </div>
@@ -86,7 +86,7 @@ export function CurrentPulsePanel() {
         </div>
       </div>
 
-      {isGuest && (
+      {isAnonymous && (
         <div className="absolute inset-0 flex items-center justify-center bg-surface/45 backdrop-blur-[2px]">
           <div className="mx-6 max-w-md border-2 border-outline-variant bg-surface-container px-6 py-5 text-center shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center border-2 border-primary bg-surface-container-low">
@@ -97,16 +97,15 @@ export function CurrentPulsePanel() {
               Inicia sesión para verlo
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">
-              Tu progreso, tus hitos y tu archivo personal aparecerán aquí cuando el acceso esté disponible.
+              Tu progreso, tus hitos y tu archivo personal aparecerán aquí cuando conectes tu cuenta.
             </p>
-            <button
-              type="button"
-              title="Inicio de sesión disponible próximamente"
+            <a
+              href="/api/auth/login"
               className="mt-5 inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-5 py-3 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
             >
               <Sparkles size={16} />
               Iniciar sesión
-            </button>
+            </a>
           </div>
         </div>
       )}

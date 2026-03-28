@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import {
   avatarOptions,
+  getRenderableCurrentProfile,
   garmentColorMeta,
   sanctuaryActions,
   useSanctuaryStore,
@@ -56,8 +57,9 @@ function isGarmentField(field: EditableAvatarField): field is GarmentField {
 
 export function AvatarStudio() {
   const sanctuary = useSanctuaryStore();
-  const profile = sanctuary.profiles[sanctuary.currentUserId] ?? sanctuary.profiles["guest-current"];
+  const profile = getRenderableCurrentProfile(sanctuary);
   const avatar = profile.avatar;
+  const isAnonymous = sanctuary.sessionState === "anonymous";
   const [activeField, setActiveField] = useState<EditableAvatarField>("sex");
   const rootRef = useRef<HTMLDivElement | null>(null);
   const currentOptions = useMemo(() => avatarOptions[activeField], [activeField]);
@@ -99,6 +101,23 @@ export function AvatarStudio() {
       </aside>
 
       <section className="space-y-6">
+        {isAnonymous ? (
+          <div className="gsap-rise border border-outline-variant bg-surface-container-low px-5 py-4">
+            <p className="font-headline text-[10px] font-bold uppercase tracking-[0.26em] text-outline">Avatar bloqueado</p>
+            <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm leading-relaxed text-on-surface-variant">
+                Puedes inspeccionar el editor, pero necesitas iniciar sesión para guardar cambios en tu avatar.
+              </p>
+              <a
+                href="/api/auth/login"
+                className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-3 font-headline text-xs font-bold uppercase tracking-[0.2em] text-on-primary"
+              >
+                Iniciar sesión
+              </a>
+            </div>
+          </div>
+        ) : null}
+
         <div className="gsap-rise border border-outline-variant bg-[radial-gradient(circle_at_50%_16%,rgba(255,193,112,0.12),transparent_38%),linear-gradient(180deg,#201714_0%,#17110f_100%)] px-6 py-8 sm:px-8">
           <div className="flex min-h-[27rem] items-center justify-center overflow-hidden sm:min-h-[33rem]">
             <PixelAvatar
@@ -128,13 +147,19 @@ export function AvatarStudio() {
               return (
                 <div
                   key={option.value}
-                  onClick={() =>
+                  onClick={() => {
+                    if (isAnonymous) {
+                      return;
+                    }
                     sanctuaryActions.updateAvatar(
                       activeField,
                       option.value as AvatarConfig[typeof activeField],
-                    )
-                  }
+                    );
+                  }}
                   onKeyDown={(event) => {
+                    if (isAnonymous) {
+                      return;
+                    }
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       sanctuaryActions.updateAvatar(
@@ -144,12 +169,12 @@ export function AvatarStudio() {
                     }
                   }}
                   role="button"
-                  tabIndex={0}
+                  tabIndex={isAnonymous ? -1 : 0}
                   className={`gsap-rise overflow-hidden border p-3 text-left transition ${
                     active
                       ? "border-primary bg-primary/10"
                       : "border-outline-variant bg-surface-container-low hover:border-secondary"
-                  }`}
+                  } ${isAnonymous ? "cursor-not-allowed opacity-70" : ""}`}
                 >
                   <div className="flex justify-center">
                     <ItemModelPreview field={activeField} value={option.value} avatar={avatar} />
@@ -165,6 +190,9 @@ export function AvatarStudio() {
                             title={colorOption.label}
                             aria-label={colorOption.label}
                             onClick={(event) => {
+                              if (isAnonymous) {
+                                return;
+                              }
                               event.stopPropagation();
                               sanctuaryActions.updateAvatar(
                                 activeField,
@@ -175,6 +203,7 @@ export function AvatarStudio() {
                                 colorOption.value as AvatarConfig[typeof activeColorField],
                               );
                             }}
+                            disabled={isAnonymous}
                             className={`h-4 w-4 rounded-full border transition ${
                               selectedColor && active
                                 ? "scale-110 border-primary ring-2 ring-primary/40"

@@ -26,8 +26,8 @@ export function HubPulsePanel() {
                 {summary.profile.displayName}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-on-surface-variant">
-                {sanctuary.authMode === "guest"
-                  ? "Tu presencia sigue siendo privada. El acceso social llegará cuando el inicio de sesión esté listo."
+                {sanctuary.sessionState === "anonymous"
+                  ? "Estás viendo el santuario en solo lectura. Inicia sesión para activar presencia, archivo y progreso sincronizado."
                   : `Tu sala social activa es ${activeRoom?.name ?? "la biblioteca compartida"}. El archivo ya está registrando sesiones y hitos reales.`}
               </p>
 
@@ -57,7 +57,7 @@ export function HubPulsePanel() {
               <div>
                 <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">Ruta privada</p>
                 <h3 className="mt-2 font-headline text-xl font-black uppercase tracking-tight text-primary">Santuario silencioso</h3>
-                <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">Pomodoro individual y avatar local en modo invitado.</p>
+                <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">Pomodoro individual y avatar personal en una sala privada.</p>
               </div>
               <Castle size={20} className="text-primary" />
             </div>

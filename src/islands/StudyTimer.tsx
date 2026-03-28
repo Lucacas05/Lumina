@@ -38,12 +38,12 @@ export function StudyTimer({ roomKind, roomCode, roomName, showGardenHint = fals
 
   const timer = useMemo(() => getCurrentTimer(sanctuary, now), [sanctuary, now]);
   const boundToCurrentRoom = timer.roomKind === roomKind && timer.roomCode === roomCode;
-  const isGuestBlocked = sanctuary.authMode === "guest" && roomKind !== "solo";
-  const canEditDurations = !isGuestBlocked && timer.status !== "running";
+  const isAnonymousBlocked = sanctuary.sessionState === "anonymous";
+  const canEditDurations = !isAnonymousBlocked && timer.status !== "running";
   const phaseLabel = timer.phase === "break" ? "Descanso activo" : "Foco en curso";
   const hint =
-    isGuestBlocked
-      ? "El acceso a espacios compartidos llegará con el inicio de sesión."
+    isAnonymousBlocked
+      ? "Conecta tu cuenta para activar el reloj y registrar sesiones reales."
       : boundToCurrentRoom
         ? roomKind === "solo"
           ? "Este reloj alimenta tus sesiones privadas."
@@ -56,7 +56,7 @@ export function StudyTimer({ roomKind, roomCode, roomName, showGardenHint = fals
   }, [timer.focusDurationSeconds, timer.breakDurationSeconds]);
 
   const handleStart = () => {
-    if (isGuestBlocked) {
+    if (isAnonymousBlocked) {
       return;
     }
 
@@ -165,7 +165,7 @@ export function StudyTimer({ roomKind, roomCode, roomName, showGardenHint = fals
           <button
             type="button"
             onClick={timer.status === "running" && boundToCurrentRoom ? sanctuaryActions.pauseTimer : handleStart}
-            disabled={isGuestBlocked}
+            disabled={isAnonymousBlocked}
             className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-6 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
           >
             {timer.status === "running" && boundToCurrentRoom ? <Pause size={16} /> : <Play size={16} />}
@@ -174,6 +174,7 @@ export function StudyTimer({ roomKind, roomCode, roomName, showGardenHint = fals
           <button
             type="button"
             onClick={handleReset}
+            disabled={isAnonymousBlocked}
             className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-tertiary-fixed-variant bg-tertiary px-6 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-tertiary"
           >
             <RotateCcw size={16} />
@@ -181,7 +182,17 @@ export function StudyTimer({ roomKind, roomCode, roomName, showGardenHint = fals
           </button>
         </div>
 
-        {showGardenHint && boundToCurrentRoom && timer.phase === "break" && (
+        {isAnonymousBlocked ? (
+          <a
+            href="/api/auth/login"
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-3 text-center font-headline text-xs font-bold uppercase tracking-[0.22em] text-on-primary"
+          >
+            <Sparkles size={16} />
+            Iniciar sesión para activar el reloj
+          </a>
+        ) : null}
+
+        {showGardenHint && !isAnonymousBlocked && boundToCurrentRoom && timer.phase === "break" && (
           <a
             href="/jardin"
             className="mt-6 inline-flex w-full items-center justify-center gap-2 border-2 border-primary/35 bg-surface-container-low px-4 py-3 font-headline text-xs font-bold uppercase tracking-[0.22em] text-primary"

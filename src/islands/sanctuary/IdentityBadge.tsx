@@ -24,12 +24,15 @@ interface MeResponse {
   user: SessionUser | null;
 }
 
+type AuthFeedback = "success" | "error" | null;
+
 export function IdentityBadge({ initialUser = null, oauthAvailable = true }: IdentityBadgeProps) {
   const sanctuary = useSanctuaryStore();
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(initialUser);
   const [isReady, setIsReady] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isOAuthAvailable, setIsOAuthAvailable] = useState(oauthAvailable);
+  const [authFeedback, setAuthFeedback] = useState<AuthFeedback>(null);
   const syncTimeoutRef = useRef<number | null>(null);
   const lastSyncedStateRef = useRef<string | null>(null);
 
@@ -57,8 +60,8 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
         }
 
         if (!payload.user) {
-          if (sanctuary.authMode === "account") {
-            sanctuaryActions.returnToGuestMode();
+          if (sanctuary.sessionState === "authenticated") {
+            sanctuaryActions.returnToAnonymousState();
           }
           setSessionUser(null);
           lastSyncedStateRef.current = null;
@@ -93,7 +96,7 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
           lastSyncedStateRef.current = serializedSnapshot;
         }
       } catch {
-        // Keep the local guest experience when the backend is unavailable.
+        // Keep the anonymous read-only experience when the backend is unavailable.
       } finally {
         if (!cancelled) {
           setIsReady(true);
@@ -112,11 +115,25 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
   }, []);
 
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const status = url.searchParams.get("auth");
+    const nextFeedback = status === "success" ? "success" : status === "error" ? "error" : null;
+
+    if (!nextFeedback) {
+      return;
+    }
+
+    setAuthFeedback(nextFeedback);
+    url.searchParams.delete("auth");
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+  }, []);
+
+  useEffect(() => {
     if (!isReady || !sessionUser) {
       return;
     }
 
-    if (sanctuary.authMode !== "account" || sanctuary.currentUserId !== sessionUser.id) {
+    if (sanctuary.sessionState !== "authenticated" || sanctuary.currentUserId !== sessionUser.id) {
       return;
     }
 
@@ -142,7 +159,7 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
       })
         .then((response) => {
           if (response.status === 401) {
-            sanctuaryActions.returnToGuestMode();
+            sanctuaryActions.returnToAnonymousState();
             setSessionUser(null);
             lastSyncedStateRef.current = null;
             return;
@@ -177,62 +194,81 @@ export function IdentityBadge({ initialUser = null, oauthAvailable = true }: Ide
         window.clearTimeout(syncTimeoutRef.current);
       }
 
-      sanctuaryActions.returnToGuestMode();
+      sanctuaryActions.returnToAnonymousState();
       setSessionUser(null);
       lastSyncedStateRef.current = null;
       window.location.assign("/");
     }
   }
 
-  const label = sessionUser?.displayName ?? "Invitado";
-  const detail = sessionUser ? `@${sessionUser.username}` : "Acceso local";
+  const label = sessionUser?.displayName ?? "Sin sesión";
+  const detail = sessionUser ? `@${sessionUser.username}` : "Solo lectura";
+  const feedbackText =
+    authFeedback === "success"
+      ? "Sesión iniciada correctamente."
+      : authFeedback === "error"
+        ? "No se pudo completar el acceso con GitHub."
+        : null;
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="hidden text-right sm:block">
-        <p className="font-headline text-xs font-bold uppercase tracking-widest text-primary">{label}</p>
-        <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">
-          {detail}
-        </p>
-      </div>
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex items-center gap-3">
+        <div className="hidden text-right sm:block">
+          <p className="font-headline text-xs font-bold uppercase tracking-widest text-primary">{label}</p>
+          <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">
+            {detail}
+          </p>
+        </div>
 
-      {sessionUser ? (
-        <button
-          type="button"
-          onClick={() => void handleLogout()}
-          disabled={isLoggingOut}
-          className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <LogOut size={16} />
-          {isLoggingOut ? "Cerrando..." : "Cerrar sesión"}
-        </button>
-      ) : isOAuthAvailable ? (
-        <a
-          href="/api/auth/login"
-          className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
-        >
-          <LogIn size={16} />
-          Iniciar sesión
-        </a>
-      ) : (
-        <button
-          type="button"
-          disabled={true}
-          title="Configura GitHub OAuth para activar el inicio de sesión"
-          className="inline-flex cursor-not-allowed items-center justify-center gap-2 border-b-[3px] border-outline-variant bg-surface-container-high px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-outline"
-        >
-          <LogIn size={16} />
-          Iniciar sesión
-        </button>
-      )}
-
-      <div className="hidden h-10 w-10 items-center justify-center overflow-hidden border-2 border-outline-variant bg-surface-container-highest lg:flex">
-        {sessionUser?.avatarUrl ? (
-          <img src={sessionUser.avatarUrl} alt={sessionUser.displayName} className="h-full w-full object-cover" />
+        {sessionUser ? (
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={isLoggingOut}
+            className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <LogOut size={16} />
+            {isLoggingOut ? "Cerrando..." : "Cerrar sesión"}
+          </button>
+        ) : isOAuthAvailable ? (
+          <a
+            href="/api/auth/login"
+            className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
+          >
+            <LogIn size={16} />
+            Iniciar sesión
+          </a>
         ) : (
-          <UserCircle className="text-primary" size={22} />
+          <button
+            type="button"
+            disabled={true}
+            title="Configura GitHub OAuth para activar el inicio de sesión"
+            className="inline-flex cursor-not-allowed items-center justify-center gap-2 border-b-[3px] border-outline-variant bg-surface-container-high px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-outline"
+          >
+            <LogIn size={16} />
+            Iniciar sesión
+          </button>
         )}
+
+        <div className="hidden h-10 w-10 items-center justify-center overflow-hidden border-2 border-outline-variant bg-surface-container-highest lg:flex">
+          {sessionUser?.avatarUrl ? (
+            <img src={sessionUser.avatarUrl} alt={sessionUser.displayName} className="h-full w-full object-cover" />
+          ) : (
+            <UserCircle className="text-primary" size={22} />
+          )}
+        </div>
       </div>
+
+      {feedbackText ? (
+        <p
+          className={[
+            "max-w-xs text-right font-headline text-[10px] font-bold uppercase tracking-[0.18em]",
+            authFeedback === "success" ? "text-secondary" : "text-primary",
+          ].join(" ")}
+        >
+          {feedbackText}
+        </p>
+      ) : null}
     </div>
   );
 }

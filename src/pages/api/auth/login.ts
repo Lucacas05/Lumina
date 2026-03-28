@@ -7,7 +7,7 @@ export const prerender = false;
 export async function GET({ cookies, redirect, request }: APIContext) {
   const github = getGitHubOAuth();
   if (!github) {
-    return redirect("/");
+    return redirect("/?auth=error");
   }
 
   const state = arctic.generateState();
@@ -15,5 +15,5 @@ export async function GET({ cookies, redirect, request }: APIContext) {
 
   setOAuthStateCookie(cookies, state, request);
 
-  return Response.redirect(url, 302);
+  return redirect(url.toString());
 }

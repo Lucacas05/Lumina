@@ -5,21 +5,21 @@ import { useSanctuaryStore } from "@/lib/sanctuary/store";
 export function HubSocialSpaces() {
   const sanctuary = useSanctuaryStore();
   const { sharedLibrary, garden } = siteContent.dashboard.spaces;
-  const isGuest = sanctuary.authMode === "guest";
+  const isAnonymous = sanctuary.sessionState === "anonymous";
 
   return (
     <>
       <div className="md:col-span-8">
         <div className="relative flex h-full overflow-hidden border-4 border-surface-container-highest bg-surface-container-high p-1 text-left">
-          <a href={isGuest ? undefined : sharedLibrary.href} className="relative flex min-h-[18rem] flex-1 overflow-hidden bg-surface-dim md:min-h-[28rem]">
+          <a href={isAnonymous ? undefined : sharedLibrary.href} className="relative flex min-h-[18rem] flex-1 overflow-hidden bg-surface-dim md:min-h-[28rem]">
             <div
-              className={["absolute inset-0 bg-cover bg-no-repeat transition-transform duration-500", !isGuest ? "group-hover:scale-[1.03]" : "blur-[3px] scale-[1.02]"].join(" ")}
+              className={["absolute inset-0 bg-cover bg-no-repeat transition-transform duration-500", !isAnonymous ? "group-hover:scale-[1.03]" : "blur-[3px] scale-[1.02]"].join(" ")}
               style={{ backgroundImage: `url(${images.silentWing})`, backgroundPosition: "center 46%" }}
               aria-hidden="true"
             />
             <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,18,16,0.92)_0%,rgba(24,18,16,0.86)_28%,rgba(24,18,16,0.38)_56%,rgba(24,18,16,0.18)_100%)]" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-transparent to-black/10" />
-            <div className={["absolute inset-0", isGuest ? "blur-[4px]" : ""].join(" ")}>
+            <div className={["absolute inset-0", isAnonymous ? "blur-[4px]" : ""].join(" ")}>
               <div className="absolute left-4 top-4 bg-tertiary px-3 py-1 font-headline text-xs font-bold uppercase tracking-tighter text-on-tertiary">
                 {sharedLibrary.badge}
               </div>
@@ -33,7 +33,7 @@ export function HubSocialSpaces() {
               </div>
             </div>
 
-            {isGuest && (
+            {isAnonymous && (
               <div className="absolute inset-0 flex items-center justify-center bg-surface/35 backdrop-blur-[2px]">
                 <div className="mx-6 max-w-sm border-2 border-outline-variant bg-surface-container px-5 py-4 text-center shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
                   <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center border-2 border-primary bg-surface-container-low">
@@ -45,14 +45,13 @@ export function HubSocialSpaces() {
                   <h3 className="mt-2 font-headline text-xl font-black uppercase tracking-tight text-on-surface">
                     Inicia sesión para entrar
                   </h3>
-                  <button
-                    type="button"
-                    title="Inicio de sesión disponible próximamente"
+                  <a
+                    href="/api/auth/login"
                     className="mt-4 inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
                   >
                     <Sparkles size={14} />
                     Iniciar sesión
-                  </button>
+                  </a>
                 </div>
               </div>
             )}
@@ -62,15 +61,15 @@ export function HubSocialSpaces() {
 
       <div className="md:col-span-4">
         <div className="relative flex h-full overflow-hidden border-4 border-surface-container-highest bg-surface-container-high p-1 text-left">
-          <a href={isGuest ? undefined : garden.href} className="relative flex min-h-[18rem] flex-1 overflow-hidden bg-surface-dim md:min-h-[28rem]">
+          <a href={isAnonymous ? undefined : garden.href} className="relative flex min-h-[18rem] flex-1 overflow-hidden bg-surface-dim md:min-h-[28rem]">
             <img
               src={images.gardenTerrace}
-              className={["h-full w-full object-cover transition-transform duration-500", isGuest ? "blur-[3px] scale-[1.02]" : "group-hover:scale-105"].join(" ")}
+              className={["h-full w-full object-cover transition-transform duration-500", isAnonymous ? "blur-[3px] scale-[1.02]" : "group-hover:scale-105"].join(" ")}
               alt={garden.alt}
               loading="lazy"
               decoding="async"
             />
-            <div className={["absolute inset-0", isGuest ? "blur-[4px]" : ""].join(" ")}>
+            <div className={["absolute inset-0", isAnonymous ? "blur-[4px]" : ""].join(" ")}>
               <div className="absolute left-4 top-4 bg-primary px-3 py-1 font-headline text-xs font-bold uppercase tracking-tighter text-on-primary">
                 {garden.badge}
               </div>
@@ -80,7 +79,7 @@ export function HubSocialSpaces() {
               </div>
             </div>
 
-            {isGuest && (
+            {isAnonymous && (
               <div className="absolute inset-0 flex items-center justify-center bg-surface/35 backdrop-blur-[2px]">
                 <div className="mx-6 max-w-sm border-2 border-outline-variant bg-surface-container px-5 py-4 text-center shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
                   <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center border-2 border-primary bg-surface-container-low">
@@ -92,14 +91,13 @@ export function HubSocialSpaces() {
                   <h3 className="mt-2 font-headline text-xl font-black uppercase tracking-tight text-on-surface">
                     Inicia sesión para entrar
                   </h3>
-                  <button
-                    type="button"
-                    title="Inicio de sesión disponible próximamente"
+                  <a
+                    href="/api/auth/login"
                     className="mt-4 inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
                   >
                     <Sparkles size={14} />
                     Iniciar sesión
-                  </button>
+                  </a>
                 </div>
               </div>
             )}

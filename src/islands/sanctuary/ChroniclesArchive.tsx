@@ -186,6 +186,7 @@ export function ChroniclesArchive() {
   const achievements = getAchievementsForCurrentProfile(sanctuary);
   const timelineEntries = buildTimelineEntries(sanctuary, summary.profile.id);
   const cadenceEntries = buildCadenceEntries(sanctuary, summary.profile.id);
+  const isAnonymous = sanctuary.sessionState === "anonymous";
 
   useGsapReveal(rootRef);
 
@@ -213,17 +214,35 @@ export function ChroniclesArchive() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <a href="/estudio" className={`${buttonBaseClass} ${buttonVariants.primary}`}>
-              <BookOpen size={16} />
-              Reanudar lectura
-            </a>
-            <a href="/biblioteca-compartida" className={`${buttonBaseClass} ${buttonVariants.tertiary}`}>
-              <Users size={16} />
-              Ir a la biblioteca
-            </a>
+            {isAnonymous ? (
+              <a href="/api/auth/login" className={`${buttonBaseClass} ${buttonVariants.primary}`}>
+                <Users size={16} />
+                Iniciar sesión
+              </a>
+            ) : (
+              <>
+                <a href="/estudio" className={`${buttonBaseClass} ${buttonVariants.primary}`}>
+                  <BookOpen size={16} />
+                  Reanudar lectura
+                </a>
+                <a href="/biblioteca-compartida" className={`${buttonBaseClass} ${buttonVariants.tertiary}`}>
+                  <Users size={16} />
+                  Ir a la biblioteca
+                </a>
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      {isAnonymous ? (
+        <section className="gsap-rise bg-surface-container pixel-border p-5">
+          <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">Archivo bloqueado</p>
+          <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">
+            Las crónicas y los hitos aparecerán aquí cuando tengas una sesión activa y el santuario pueda guardar tu progreso.
+          </p>
+        </section>
+      ) : null}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="gsap-rise bg-surface-container pixel-border p-5">

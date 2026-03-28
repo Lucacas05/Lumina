@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { UserRound } from "lucide-react";
-import { useSanctuaryStore } from "@/lib/sanctuary/store";
+import { getRenderableCurrentProfile, useSanctuaryStore } from "@/lib/sanctuary/store";
 import { PixelAvatar } from "@/islands/sanctuary/PixelAvatar";
 import { useGsapReveal } from "@/islands/sanctuary/useGsapReveal";
 
@@ -11,14 +11,14 @@ interface AuthModePanelProps {
 
 export function AuthModePanel({ contextLabel, compact = false }: AuthModePanelProps) {
   const sanctuary = useSanctuaryStore();
-  const currentProfile = sanctuary.profiles[sanctuary.currentUserId] ?? sanctuary.profiles["guest-current"];
+  const currentProfile = getRenderableCurrentProfile(sanctuary);
   const avatar = currentProfile.avatar;
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const isAccount = sanctuary.authMode === "account";
-  const title = isAccount ? currentProfile.displayName : "Invitado del santuario";
-  const description = isAccount
+  const isAuthenticated = sanctuary.sessionState === "authenticated";
+  const title = isAuthenticated ? currentProfile.displayName : "Acceso en solo lectura";
+  const description = isAuthenticated
     ? `Sesión activa como ${currentProfile.handle} con progreso sincronizable entre dispositivos.`
-    : "Explora el santuario en modo invitado mientras el inicio de sesión sigue en preparación.";
+    : "Explora el santuario y sus vistas bloqueadas hasta conectar tu cuenta de GitHub.";
 
   useGsapReveal(rootRef);
 
@@ -39,7 +39,7 @@ export function AuthModePanel({ contextLabel, compact = false }: AuthModePanelPr
             </div>
             <div className="gsap-rise inline-flex items-center gap-2 rounded-none border border-outline-variant bg-surface-container-low px-3 py-2 font-headline text-[10px] font-bold uppercase tracking-[0.22em] text-outline">
               <UserRound size={12} />
-              {isAccount ? "Cuenta activa" : "Invitado"}
+              {isAuthenticated ? "Cuenta activa" : "Solo lectura"}
             </div>
           </div>
         </div>
@@ -64,7 +64,7 @@ export function AuthModePanel({ contextLabel, compact = false }: AuthModePanelPr
           </div>
           <div className="gsap-rise inline-flex items-center gap-2 self-start rounded-none border border-outline-variant bg-surface-container-low px-4 py-3 font-headline text-[10px] font-bold uppercase tracking-[0.22em] text-outline md:self-auto">
             <UserRound size={14} />
-            {isAccount ? "Conectado con GitHub" : "Inicio de sesión disponible"}
+            {isAuthenticated ? "Conectado con GitHub" : "Acceso bloqueado"}
           </div>
         </div>
       </div>

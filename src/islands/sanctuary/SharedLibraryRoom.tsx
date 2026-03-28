@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, DoorOpen, Plus, UsersRound } from "lucide-react";
 import {
+  getCurrentPresence,
   getCurrentRoom,
+  getRenderableCurrentProfile,
   getFriendsForCurrentProfile,
   getPrivateRoomsForCurrentProfile,
   getRoomMembers,
@@ -34,7 +36,9 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
     [currentRoom],
   );
   const sceneKind = currentRoom?.kind === "public" ? "public-library" : "shared-library";
-  const currentPresence = sanctuary.presences[sanctuary.currentUserId];
+  const currentPresence = getCurrentPresence(sanctuary);
+  const currentAvatar = getRenderableCurrentProfile(sanctuary).avatar;
+  const isAnonymous = sanctuary.sessionState === "anonymous";
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("codigo");
@@ -81,7 +85,7 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
     }
   }, [currentPresence?.message, currentPresence?.state]);
 
-  if (sanctuary.authMode === "guest") {
+  if (isAnonymous) {
     return (
       <div className="space-y-6">
         <SanctuaryCanvasScene
@@ -90,15 +94,21 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
           subtitle="Vista previa del lectorio público con el mismo visor 2D que usará el modo social real."
           badge="Vista social"
           sceneKind="public-library"
-          avatar={sanctuary.profiles[sanctuary.currentUserId].avatar}
+          avatar={currentAvatar}
           locked={true}
-          lockedLabel="Esta biblioteca se abrirá con presencia real, amistades e invitaciones cuando esté listo el inicio de sesión."
+          lockedLabel="Esta biblioteca se abre al conectar tu cuenta, con presencia real, amistades e invitaciones."
         />
         <div className="bg-surface-container pixel-border p-6">
           <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">Pulso social</p>
           <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">
-            El visor ya puede mostrar biblioteca pública, biblioteca compartida y personajes remotos. Falta conectar el acceso real para que dejes de verlo como previsualización.
+            El visor ya puede mostrar biblioteca pública, biblioteca compartida y personajes remotos. Inicia sesión para desbloquear presencia real y salas privadas.
           </p>
+          <a
+            href="/api/auth/login"
+            className="mt-4 inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-5 py-3 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
+          >
+            Iniciar sesión
+          </a>
         </div>
       </div>
     );
@@ -206,7 +216,7 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
             }
             badge={currentRoom.kind === "public" ? "Biblioteca pública" : "Sala privada"}
             sceneKind={sceneKind}
-            avatar={sanctuary.profiles[sanctuary.currentUserId].avatar}
+            avatar={currentAvatar}
           />
         )}
       </div>

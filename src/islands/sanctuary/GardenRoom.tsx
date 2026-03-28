@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageSquareQuote, Trees } from "lucide-react";
 import {
+  getCurrentPresence,
   getCurrentRoom,
+  getRenderableCurrentProfile,
   getRoomMembers,
   sanctuaryActions,
   useSanctuaryStore,
@@ -20,11 +22,13 @@ export function GardenRoom({ backgroundUrl: _backgroundUrl }: GardenRoomProps) {
   const currentRoom = getCurrentRoom(sanctuary);
   const gardenMembers = currentRoom ? getRoomMembers(sanctuary, currentRoom.code, "garden") : [];
   const libraryMembers = currentRoom ? getRoomMembers(sanctuary, currentRoom.code, "library") : [];
-  const currentPresence = sanctuary.presences[sanctuary.currentUserId];
+  const currentPresence = getCurrentPresence(sanctuary);
+  const currentAvatar = getRenderableCurrentProfile(sanctuary).avatar;
   const [message, setMessage] = useState(currentPresence?.message ?? "");
   const sceneRef = useRef<SanctuaryCanvasHandle | null>(null);
   const previousStateRef = useRef("");
-  const canSpeak = sanctuary.authMode === "account" && currentPresence?.space === "garden";
+  const isAnonymous = sanctuary.sessionState === "anonymous";
+  const canSpeak = sanctuary.sessionState === "authenticated" && currentPresence?.space === "garden";
 
   useEffect(() => {
     setMessage(currentPresence?.message ?? "");
@@ -67,7 +71,7 @@ export function GardenRoom({ backgroundUrl: _backgroundUrl }: GardenRoomProps) {
     }
   }, [currentPresence?.message, currentPresence?.state]);
 
-  if (sanctuary.authMode === "guest") {
+  if (isAnonymous) {
     return (
       <div className="space-y-6">
         <SanctuaryCanvasScene
@@ -76,10 +80,22 @@ export function GardenRoom({ backgroundUrl: _backgroundUrl }: GardenRoomProps) {
           subtitle="El jardín ya usa el visor 2D: paseos suaves, bocadillos breves y puntos de pausa para el grupo."
           badge="Vista bloqueada"
           sceneKind="garden"
-          avatar={sanctuary.profiles[sanctuary.currentUserId].avatar}
+          avatar={currentAvatar}
           locked={true}
-          lockedLabel="Este jardín se abrirá con el acceso social real. De momento queda como vista previa del descanso compartido."
+          lockedLabel="Este jardín se abre al conectar tu cuenta. De momento queda como vista previa del descanso compartido."
         />
+        <div className="bg-surface-container pixel-border p-6">
+          <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">Acceso restringido</p>
+          <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">
+            El jardín solo permite mensajes y presencia compartida cuando la sesión está autenticada.
+          </p>
+          <a
+            href="/api/auth/login"
+            className="mt-4 inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-5 py-3 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
+          >
+            Iniciar sesión
+          </a>
+        </div>
       </div>
     );
   }
@@ -97,7 +113,7 @@ export function GardenRoom({ backgroundUrl: _backgroundUrl }: GardenRoomProps) {
           subtitle="La pausa social vive aquí: paseo ligero, bocadillos breves y transición suave antes de volver al foco."
           badge={currentRoom.kind === "public" ? "Descanso público" : "Descanso privado"}
           sceneKind="garden"
-          avatar={sanctuary.profiles[sanctuary.currentUserId].avatar}
+          avatar={currentAvatar}
         />
 
         <div className="grid gap-4 md:grid-cols-2">

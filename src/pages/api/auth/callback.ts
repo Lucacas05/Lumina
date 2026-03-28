@@ -30,7 +30,7 @@ export const prerender = false;
 export async function GET({ cookies, redirect, request, url }: APIContext) {
   const github = getGitHubOAuth();
   if (!github) {
-    return redirect("/");
+    return redirect("/?auth=error");
   }
 
   const code = url.searchParams.get("code");
@@ -40,7 +40,7 @@ export async function GET({ cookies, redirect, request, url }: APIContext) {
   clearOAuthStateCookie(cookies, request);
 
   if (!code || !state || !storedState || state !== storedState) {
-    return redirect("/");
+    return redirect("/?auth=error");
   }
 
   try {
@@ -54,7 +54,7 @@ export async function GET({ cookies, redirect, request, url }: APIContext) {
     });
 
     if (!response.ok) {
-      return redirect("/");
+      return redirect("/?auth=error");
     }
 
     const githubUser = (await response.json()) as GitHubUserResponse;
@@ -71,8 +71,8 @@ export async function GET({ cookies, redirect, request, url }: APIContext) {
     const session = createSession(userId);
     setSessionCookie(cookies, session.id, request);
 
-    return redirect("/");
+    return redirect("/?auth=success");
   } catch {
-    return redirect("/");
+    return redirect("/?auth=error");
   }
 }

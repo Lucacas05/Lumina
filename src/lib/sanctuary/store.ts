@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-export type AuthMode = "guest" | "account";
+export type SessionState = "anonymous" | "authenticated";
 export type RoomKind = "solo" | "public" | "private";
 export type PresenceState = "idle" | "studying" | "break" | "offline";
 export type PresenceSpace = "solo" | "library" | "garden";
@@ -222,8 +222,8 @@ export interface AchievementUnlock {
 
 export interface SanctuaryState {
   version: number;
-  authMode: AuthMode;
-  currentUserId: string;
+  sessionState: SessionState;
+  currentUserId: string | null;
   currentRoomCode: string;
   profiles: Record<string, Profile>;
   rooms: Record<string, Room>;
@@ -566,7 +566,7 @@ const STORAGE_KEY = "scholars-sanctuary-state-v3";
 const CHANNEL_NAME = "scholars-sanctuary-live";
 const DEFAULT_PRIVATE_DESCRIPTION = "Sala reservada para amistades invitadas y foco compartido.";
 
-const guestAvatar: AvatarConfig = normalizeAvatarConfig({
+export const anonymousPreviewAvatar: AvatarConfig = normalizeAvatarConfig({
   sex: "masculino",
   skinTone: "amber",
   hairStyle: "short-02-parted",
@@ -579,6 +579,19 @@ const guestAvatar: AvatarConfig = normalizeAvatarConfig({
   socks: "socks-01-ankle",
   socksColor: "cream",
 });
+
+function createAnonymousPreviewProfile(createdAt: number): Profile {
+  return {
+    id: "anonymous-preview",
+    displayName: "Visitante del santuario",
+    handle: "@solo-lectura",
+    avatar: anonymousPreviewAvatar,
+    bio: "Explora el santuario en modo de solo lectura hasta conectar tu cuenta.",
+    createdAt,
+  };
+}
+
+export const anonymousPreviewProfile = createAnonymousPreviewProfile(0);
 
 const demoProfiles: Profile[] = [
   {
@@ -648,24 +661,12 @@ const demoProfiles: Profile[] = [
 
 function createInitialState(): SanctuaryState {
   const createdAt = Date.now();
-  const profiles = Object.fromEntries(
-    [
-      {
-        id: "guest-current",
-        displayName: "Invitado del santuario",
-        handle: "@invitado",
-        avatar: guestAvatar,
-        bio: "Sesiones privadas sin memoria social.",
-        createdAt,
-      },
-      ...demoProfiles,
-    ].map((profile) => [profile.id, profile]),
-  );
+  const profiles = Object.fromEntries(demoProfiles.map((profile) => [profile.id, profile]));
 
   return {
-    version: 5,
-    authMode: "guest",
-    currentUserId: "guest-current",
+    version: 6,
+    sessionState: "anonymous",
+    currentUserId: null,
     currentRoomCode: PUBLIC_ROOM_CODE,
     profiles,
     rooms: {
@@ -679,15 +680,6 @@ function createInitialState(): SanctuaryState {
       },
     },
     presences: {
-      "guest-current": {
-        userId: "guest-current",
-        roomCode: SOLO_ROOM_CODE,
-        roomKind: "solo",
-        state: "idle",
-        space: "solo",
-        message: "",
-        updatedAt: createdAt,
-      },
       "demo-lyra": {
         userId: "demo-lyra",
         roomCode: PUBLIC_ROOM_CODE,
@@ -766,21 +758,28 @@ function cloneState<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function isAuthenticated(state: SanctuaryState) {
+  return state.sessionState === "authenticated" && Boolean(state.currentUserId);
+}
+
 function normalizeStoredState(value: unknown) {
   if (!isRecord(value)) {
     return null;
   }
 
   const fallback = createInitialState();
-  const parsed = cloneState(value as unknown) as SanctuaryState;
-  if (parsed.version !== 3 && parsed.version !== 4 && parsed.version !== 5) {
+  const parsed = cloneState(value as unknown) as SanctuaryState & {
+    authMode?: "guest" | "account";
+    sessionState?: SessionState;
+  };
+  if (parsed.version !== 3 && parsed.version !== 4 && parsed.version !== 5 && parsed.version !== 6) {
     return null;
   }
 
-  parsed.version = 5;
-  parsed.authMode = parsed.authMode === "account" ? "account" : "guest";
-  parsed.currentUserId =
-    typeof parsed.currentUserId === "string" && parsed.currentUserId ? parsed.currentUserId : fallback.currentUserId;
+  parsed.version = 6;
+  parsed.sessionState =
+    parsed.sessionState === "authenticated" || parsed.authMode === "account" ? "authenticated" : "anonymous";
+  parsed.currentUserId = typeof parsed.currentUserId === "string" && parsed.currentUserId ? parsed.currentUserId : null;
   parsed.currentRoomCode =
     typeof parsed.currentRoomCode === "string" && parsed.currentRoomCode
       ? parsed.currentRoomCode
@@ -797,6 +796,7 @@ function normalizeStoredState(value: unknown) {
       ]),
     ),
   };
+  delete parsed.profiles["guest-current"];
   parsed.rooms = {
     ...fallback.rooms,
     ...(parsed.rooms ?? {}),
@@ -805,9 +805,16 @@ function normalizeStoredState(value: unknown) {
     ...fallback.presences,
     ...(parsed.presences ?? {}),
   };
-  parsed.sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
-  parsed.chronicleEntries = Array.isArray(parsed.chronicleEntries) ? parsed.chronicleEntries : [];
-  parsed.achievementUnlocks = Array.isArray(parsed.achievementUnlocks) ? parsed.achievementUnlocks : [];
+  delete parsed.presences["guest-current"];
+  parsed.sessions = (Array.isArray(parsed.sessions) ? parsed.sessions : []).filter(
+    (session) => typeof session.userId === "string" && session.userId !== "guest-current",
+  );
+  parsed.chronicleEntries = (Array.isArray(parsed.chronicleEntries) ? parsed.chronicleEntries : []).filter(
+    (entry) => typeof entry.userId === "string" && entry.userId !== "guest-current",
+  );
+  parsed.achievementUnlocks = (Array.isArray(parsed.achievementUnlocks) ? parsed.achievementUnlocks : []).filter(
+    (entry) => typeof entry.userId === "string" && entry.userId !== "guest-current",
+  );
   parsed.friendIds = Array.isArray(parsed.friendIds) ? parsed.friendIds : fallback.friendIds;
   parsed.timer = {
     ...fallback.timer,
@@ -821,6 +828,17 @@ function normalizeStoredState(value: unknown) {
   parsed.timer.remainingSeconds =
     parsed.timer.remainingSeconds ??
     (parsed.timer.phase === "break" ? parsed.timer.breakDurationSeconds : parsed.timer.focusDurationSeconds);
+
+  if (!parsed.currentUserId || !parsed.profiles[parsed.currentUserId]) {
+    parsed.sessionState = "anonymous";
+    parsed.currentUserId = null;
+  }
+
+  if (!isAuthenticated(parsed)) {
+    parsed.currentUserId = null;
+    parsed.currentRoomCode = fallback.currentRoomCode;
+    parsed.timer = { ...fallback.timer };
+  }
 
   return parsed;
 }
@@ -851,7 +869,23 @@ function getRoomKindFromCode(state: SanctuaryState, code: string): RoomKind {
 }
 
 function getCurrentProfile(state: SanctuaryState) {
-  return state.profiles[state.currentUserId];
+  if (!state.currentUserId) {
+    return null;
+  }
+
+  return state.profiles[state.currentUserId] ?? null;
+}
+
+export function getRenderableCurrentProfile(state: SanctuaryState) {
+  return getCurrentProfile(state) ?? anonymousPreviewProfile;
+}
+
+export function getCurrentPresence(state: SanctuaryState) {
+  if (!state.currentUserId) {
+    return null;
+  }
+
+  return state.presences[state.currentUserId] ?? null;
 }
 
 function getRoomLabel(state: SanctuaryState, roomCode: string) {
@@ -867,6 +901,10 @@ function toRemoteHandle(username: string) {
 }
 
 function setCurrentPresence(state: SanctuaryState, next: Partial<Presence>) {
+  if (!state.currentUserId) {
+    return;
+  }
+
   const current = state.presences[state.currentUserId] ?? {
     userId: state.currentUserId,
     roomCode: SOLO_ROOM_CODE,
@@ -923,6 +961,10 @@ function pushChronicle(
 
 function completeFocusSession(state: SanctuaryState) {
   const userId = state.currentUserId;
+  if (!userId) {
+    return;
+  }
+
   state.sessions.unshift({
     id: crypto.randomUUID(),
     userId,
@@ -985,6 +1027,14 @@ function resetFocusState(state: SanctuaryState) {
 }
 
 function syncExpiredTimer(state: SanctuaryState, now = Date.now()) {
+  if (!isAuthenticated(state) && state.timer.status !== "idle") {
+    state.timer = {
+      ...createInitialState().timer,
+      updatedAt: now,
+    };
+    return;
+  }
+
   if (state.timer.status !== "running" || !state.timer.endsAt) {
     return;
   }
@@ -1050,8 +1100,8 @@ function getStreakDays(sessions: StudySession[]) {
   return streak;
 }
 
-function remapUserReferences(state: SanctuaryState, fromUserId: string, toUserId: string) {
-  if (fromUserId === toUserId) {
+function remapUserReferences(state: SanctuaryState, fromUserId: string | null, toUserId: string) {
+  if (!fromUserId || fromUserId === toUserId) {
     return;
   }
 
@@ -1187,7 +1237,7 @@ export function getCurrentTimer(state: SanctuaryState, now = Date.now()) {
 }
 
 export function getCurrentProfileSummary(state: SanctuaryState) {
-  const profile = getCurrentProfile(state);
+  const profile = getRenderableCurrentProfile(state);
   const sessions = state.sessions.filter((session) => session.userId === profile.id);
   const validAchievementIds = new Set(achievementDefinitions.map((achievement) => achievement.id));
   const achievements = state.achievementUnlocks.filter(
@@ -1208,10 +1258,21 @@ export function getCurrentProfileSummary(state: SanctuaryState) {
 }
 
 export function getChroniclesForCurrentProfile(state: SanctuaryState) {
+  if (!state.currentUserId) {
+    return [];
+  }
+
   return state.chronicleEntries.filter((entry) => entry.userId === state.currentUserId && entry.origin === "timer");
 }
 
 export function getAchievementsForCurrentProfile(state: SanctuaryState) {
+  if (!state.currentUserId) {
+    return achievementDefinitions.map((achievement) => ({
+      ...achievement,
+      unlockedAt: null,
+    }));
+  }
+
   const unlocked = new Map(
     state.achievementUnlocks
       .filter((entry) => entry.userId === state.currentUserId)
@@ -1229,8 +1290,13 @@ export function getCurrentRoom(state: SanctuaryState) {
 }
 
 export function getPrivateRoomsForCurrentProfile(state: SanctuaryState) {
+  if (!state.currentUserId) {
+    return [];
+  }
+
+  const currentUserId = state.currentUserId;
   return Object.values(state.rooms)
-    .filter((room) => room.kind === "private" && room.memberIds.includes(state.currentUserId))
+    .filter((room) => room.kind === "private" && room.memberIds.includes(currentUserId))
     .sort((left, right) => right.createdAt - left.createdAt);
 }
 
@@ -1293,17 +1359,17 @@ export const sanctuaryActions = {
     commit((state) => {
       const previousUserId = state.currentUserId;
       const existingProfile = state.profiles[identity.id];
-      const sourceProfile = existingProfile ?? state.profiles[previousUserId] ?? state.profiles["guest-current"];
+      const sourceProfile = existingProfile ?? (previousUserId ? state.profiles[previousUserId] : null) ?? anonymousPreviewProfile;
 
       remapUserReferences(state, previousUserId, identity.id);
-      state.authMode = "account";
+      state.sessionState = "authenticated";
       state.currentUserId = identity.id;
       state.currentRoomCode = state.rooms[state.currentRoomCode] ? state.currentRoomCode : PUBLIC_ROOM_CODE;
       state.profiles[identity.id] = {
         id: identity.id,
         displayName: identity.displayName,
         handle: toRemoteHandle(identity.username),
-        avatar: existingProfile?.avatar ?? sourceProfile?.avatar ?? guestAvatar,
+        avatar: existingProfile?.avatar ?? sourceProfile?.avatar ?? anonymousPreviewAvatar,
         bio: existingProfile?.bio ?? sourceProfile?.bio ?? `Cuenta del santuario conectada con GitHub como ${toRemoteHandle(identity.username)}.`,
         createdAt: existingProfile?.createdAt ?? sourceProfile?.createdAt ?? Date.now(),
       };
@@ -1312,7 +1378,7 @@ export const sanctuaryActions = {
         state.rooms[PUBLIC_ROOM_CODE].memberIds.unshift(identity.id);
       }
 
-      if (previousUserId !== identity.id && previousUserId !== "guest-current" && state.presences[previousUserId]) {
+      if (previousUserId && previousUserId !== identity.id && state.presences[previousUserId]) {
         state.presences[previousUserId] = {
           ...state.presences[previousUserId],
           state: "offline",
@@ -1338,29 +1404,12 @@ export const sanctuaryActions = {
     });
   },
 
-  activateLocalAccount(displayName: string) {
+  returnToAnonymousState() {
     commit((state) => {
-      const trimmed = displayName.trim() || "Escriba mayor";
       const previousUserId = state.currentUserId;
-      const guest = state.profiles["guest-current"];
-      const accountId = `account-${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "local"}`;
-      const alreadyExists = state.profiles[accountId];
-
-      state.authMode = "account";
-      state.currentUserId = accountId;
+      state.sessionState = "anonymous";
+      state.currentUserId = null;
       state.currentRoomCode = PUBLIC_ROOM_CODE;
-      state.profiles[accountId] = alreadyExists ?? {
-        id: accountId,
-        displayName: trimmed,
-        handle: toHandle(trimmed),
-        avatar: guest?.avatar ?? guestAvatar,
-        bio: "Cuenta local del santuario con acceso a espacios sociales.",
-        createdAt: Date.now(),
-      };
-
-      if (!state.rooms[PUBLIC_ROOM_CODE].memberIds.includes(accountId)) {
-        state.rooms[PUBLIC_ROOM_CODE].memberIds.unshift(accountId);
-      }
 
       if (previousUserId && state.presences[previousUserId]) {
         state.presences[previousUserId] = {
@@ -1371,45 +1420,19 @@ export const sanctuaryActions = {
         };
       }
 
-      setCurrentPresence(state, {
-        roomCode: PUBLIC_ROOM_CODE,
-        roomKind: "public",
-        state: "idle",
-        space: "library",
-        message: "",
-      });
-
-      resetFocusState(state);
-    });
-  },
-
-  returnToGuestMode() {
-    commit((state) => {
-      const previousUserId = state.currentUserId;
-      state.authMode = "guest";
-      state.currentUserId = "guest-current";
-      state.currentRoomCode = PUBLIC_ROOM_CODE;
-      if (previousUserId !== "guest-current" && state.presences[previousUserId]) {
-        state.presences[previousUserId] = {
-          ...state.presences[previousUserId],
-          state: "offline",
-          message: "",
-          updatedAt: Date.now(),
-        };
-      }
-      resetFocusState(state);
-      setCurrentPresence(state, {
-        roomCode: SOLO_ROOM_CODE,
-        roomKind: "solo",
-        state: "idle",
-        space: "solo",
-        message: "",
-      });
+      state.timer = {
+        ...createInitialState().timer,
+        updatedAt: Date.now(),
+      };
     });
   },
 
   renameCurrentProfile(displayName: string) {
     commit((state) => {
+      if (!state.currentUserId) {
+        return;
+      }
+
       const trimmed = displayName.trim();
       if (!trimmed) {
         return;
@@ -1424,6 +1447,10 @@ export const sanctuaryActions = {
 
   updateAvatar<K extends keyof AvatarConfig>(field: K, value: AvatarConfig[K]) {
     commit((state) => {
+      if (!state.currentUserId) {
+        return;
+      }
+
       state.profiles[state.currentUserId] = {
         ...state.profiles[state.currentUserId],
         avatar: {
@@ -1436,7 +1463,7 @@ export const sanctuaryActions = {
 
   selectPublicRoom() {
     commit((state) => {
-      if (state.authMode !== "account") {
+      if (!isAuthenticated(state) || !state.currentUserId) {
         return;
       }
       state.currentRoomCode = PUBLIC_ROOM_CODE;
@@ -1454,7 +1481,7 @@ export const sanctuaryActions = {
 
   createPrivateRoom(name: string, invitedIds: string[]) {
     commit((state) => {
-      if (state.authMode !== "account") {
+      if (!isAuthenticated(state) || !state.currentUserId) {
         return;
       }
 
@@ -1502,7 +1529,7 @@ export const sanctuaryActions = {
 
   joinPrivateRoom(code: string) {
     commit((state) => {
-      if (state.authMode !== "account") {
+      if (!isAuthenticated(state) || !state.currentUserId) {
         return;
       }
 
@@ -1529,7 +1556,7 @@ export const sanctuaryActions = {
   setQuickMessage(message: string) {
     commit((state) => {
       const trimmed = message.trim().slice(0, 80);
-      if (state.authMode !== "account" || state.timer.roomKind === "solo") {
+      if (!isAuthenticated(state) || state.timer.roomKind === "solo") {
         return;
       }
 
@@ -1545,12 +1572,20 @@ export const sanctuaryActions = {
 
   clearQuickMessage() {
     commit((state) => {
+      if (!isAuthenticated(state)) {
+        return;
+      }
+
       setCurrentPresence(state, { message: "" });
     });
   },
 
   startTimer(roomKind: RoomKind, roomCode: string) {
     commit((state) => {
+      if (!isAuthenticated(state) || !state.currentUserId) {
+        return;
+      }
+
       state.timer.roomKind = roomKind;
       state.timer.roomCode = roomCode;
       state.timer.status = "running";
@@ -1569,6 +1604,10 @@ export const sanctuaryActions = {
 
   pauseTimer() {
     commit((state) => {
+      if (!isAuthenticated(state) || !state.currentUserId) {
+        return;
+      }
+
       const remainingSeconds = getTimeLeft(state);
       state.timer.status = "paused";
       state.timer.remainingSeconds = remainingSeconds;
@@ -1584,6 +1623,10 @@ export const sanctuaryActions = {
 
   resetTimer(roomKind: RoomKind, roomCode: string) {
     commit((state) => {
+      if (!isAuthenticated(state)) {
+        return;
+      }
+
       state.timer = {
         roomKind,
         roomCode,
@@ -1609,6 +1652,10 @@ export const sanctuaryActions = {
 
   updateTimerDurations(focusMinutes: number, breakMinutes: number) {
     commit((state) => {
+      if (!isAuthenticated(state)) {
+        return;
+      }
+
       const safeFocusMinutes = Number.isFinite(focusMinutes) ? focusMinutes : state.timer.focusDurationSeconds / 60;
       const safeBreakMinutes = Number.isFinite(breakMinutes) ? breakMinutes : state.timer.breakDurationSeconds / 60;
       const nextFocusSeconds = Math.min(180, Math.max(5, Math.round(safeFocusMinutes))) * 60;

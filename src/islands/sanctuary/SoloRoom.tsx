@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { BookOpen, ScrollText } from "lucide-react";
 import {
+  getCurrentPresence,
   getChroniclesForCurrentProfile,
   getCurrentProfileSummary,
   SOLO_ROOM_CODE,
@@ -19,10 +20,11 @@ export function SoloRoom({ backgroundUrl: _backgroundUrl }: SoloRoomProps) {
   const sanctuary = useSanctuaryStore();
   const summary = getCurrentProfileSummary(sanctuary);
   const chronicles = getChroniclesForCurrentProfile(sanctuary).slice(0, 3);
+  const isAnonymous = sanctuary.sessionState === "anonymous";
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<SanctuaryCanvasHandle | null>(null);
   const previousStateRef = useRef<string>("");
-  const currentPresence = sanctuary.presences[sanctuary.currentUserId];
+  const currentPresence = getCurrentPresence(sanctuary);
 
   useGsapReveal(rootRef);
 
@@ -47,6 +49,23 @@ export function SoloRoom({ backgroundUrl: _backgroundUrl }: SoloRoomProps) {
   return (
     <div ref={rootRef} className="grid gap-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(22rem,24rem)] 2xl:grid-cols-[minmax(0,1.8fr)_minmax(24rem,28rem)]">
       <div className="space-y-8">
+        {isAnonymous ? (
+          <div className="gsap-rise bg-surface-container pixel-border p-5">
+            <p className="font-headline text-[10px] font-bold uppercase tracking-[0.25em] text-outline">Sala en solo lectura</p>
+            <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm leading-relaxed text-on-surface-variant">
+                El santuario silencioso se puede recorrer sin sesión, pero el reloj y las crónicas se activan solo con cuenta conectada.
+              </p>
+              <a
+                href="/api/auth/login"
+                className="inline-flex items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-5 py-3 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
+              >
+                Iniciar sesión
+              </a>
+            </div>
+          </div>
+        ) : null}
+
         <div className="gsap-rise">
           <SanctuaryCanvasScene
             ref={sceneRef}
