@@ -15,3 +15,35 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS friendships (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  friend_id TEXT NOT NULL REFERENCES users(id),
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(user_id, friend_id)
+);
+
+CREATE TABLE IF NOT EXISTS rooms (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  owner_id TEXT NOT NULL REFERENCES users(id),
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS room_members (
+  room_code TEXT NOT NULL REFERENCES rooms(code),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  PRIMARY KEY (room_code, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS room_invitations (
+  id TEXT PRIMARY KEY,
+  room_code TEXT NOT NULL REFERENCES rooms(code),
+  inviter_id TEXT NOT NULL REFERENCES users(id),
+  invitee_id TEXT NOT NULL REFERENCES users(id),
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(room_code, invitee_id)
+);

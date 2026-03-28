@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { RoomMemberPresence } from "@/lib/server/ws-types";
 
 export type SessionState = "anonymous" | "authenticated";
 export type RoomKind = "solo" | "public" | "private";
@@ -1681,6 +1682,104 @@ export const sanctuaryActions = {
       syncExpiredTimer(state);
       if (state.timer.status === "running") {
         state.timer.remainingSeconds = getTimeLeft(state);
+      }
+    });
+  },
+
+  setRemotePresences(members: RoomMemberPresence[]) {
+    commit((state) => {
+      const currentUserId = state.currentUserId;
+
+      for (const key of Object.keys(state.presences)) {
+        if (key !== currentUserId) {
+          delete state.presences[key];
+        }
+      }
+
+      members.forEach((member) => {
+        if (member.userId === currentUserId) return;
+
+        if (!state.profiles[member.userId]) {
+          state.profiles[member.userId] = {
+            id: member.userId,
+            displayName: member.displayName,
+            handle: `@${member.username}`,
+            avatar: member.avatar,
+            bio: "",
+            createdAt: Date.now(),
+          };
+        } else {
+          state.profiles[member.userId].avatar = member.avatar;
+          state.profiles[member.userId].displayName = member.displayName;
+        }
+
+        state.presences[member.userId] = {
+          userId: member.userId,
+          roomCode: state.currentRoomCode,
+          roomKind: state.rooms[state.currentRoomCode]?.kind ?? "public",
+          state: member.state as PresenceState,
+          space: member.state === "break" ? "garden" : "library",
+          message: member.message,
+          updatedAt: Date.now(),
+        };
+      });
+    });
+  },
+
+  addRemotePresence(member: RoomMemberPresence) {
+    commit((state) => {
+      if (member.userId === state.currentUserId) return;
+
+      if (!state.profiles[member.userId]) {
+        state.profiles[member.userId] = {
+          id: member.userId,
+          displayName: member.displayName,
+          handle: `@${member.username}`,
+          avatar: member.avatar,
+          bio: "",
+          createdAt: Date.now(),
+        };
+      }
+
+      state.presences[member.userId] = {
+        userId: member.userId,
+        roomCode: state.currentRoomCode,
+        roomKind: state.rooms[state.currentRoomCode]?.kind ?? "public",
+        state: member.state as PresenceState,
+        space: member.state === "break" ? "garden" : "library",
+        message: member.message,
+        updatedAt: Date.now(),
+      };
+
+      const room = state.rooms[state.currentRoomCode];
+      if (room && !room.memberIds.includes(member.userId)) {
+        room.memberIds.push(member.userId);
+      }
+    });
+  },
+
+  removeRemotePresence(userId: string) {
+    commit((state) => {
+      if (userId === state.currentUserId) return;
+      delete state.presences[userId];
+
+      const room = state.rooms[state.currentRoomCode];
+      if (room) {
+        room.memberIds = room.memberIds.filter((id) => id !== userId);
+      }
+    });
+  },
+
+  updateRemotePresence(data: { userId: string; state: string; phase: string; status: string; remainingSeconds: number; message: string }) {
+    commit((state) => {
+      if (data.userId === state.currentUserId) return;
+
+      const presence = state.presences[data.userId];
+      if (presence) {
+        presence.state = data.state as PresenceState;
+        presence.space = data.state === "break" ? "garden" : "library";
+        presence.message = data.message;
+        presence.updatedAt = Date.now();
       }
     });
   },
