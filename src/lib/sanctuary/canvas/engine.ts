@@ -36,6 +36,10 @@ interface LocalActor {
 }
 
 interface RemoteActor extends CanvasRemotePlayer {
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
   pose: ActorPose;
 }
 
@@ -77,6 +81,33 @@ function chooseFacing(
   }
 
   return dy >= 0 ? "down" : "up";
+}
+
+function movePointToward(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  deltaSeconds: number,
+  speed: number,
+) {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance <= speed * deltaSeconds || distance < 0.05) {
+    return {
+      x: toX,
+      y: toY,
+      arrived: true,
+    };
+  }
+
+  return {
+    x: fromX + (dx / distance) * speed * deltaSeconds,
+    y: fromY + (dy / distance) * speed * deltaSeconds,
+    arrived: false,
+  };
 }
 
 function getLocalSeatTarget(map: SceneMap) {
@@ -335,9 +366,32 @@ export class SanctuaryCanvasEngine {
     const next = new Map<string, RemoteActor>();
 
     datos.forEach((entry) => {
+      const previous = this.remoteActors.get(entry.id);
+      const currentX = previous?.x ?? entry.tileX;
+      const currentY = previous?.y ?? entry.tileY;
+      const targetChanged =
+        !previous ||
+        Math.hypot(
+          previous.targetX - entry.tileX,
+          previous.targetY - entry.tileY,
+        ) > 0.08;
+
       next.set(entry.id, {
         ...entry,
-        pose: entry.state === "studying" ? "sitting" : "idle",
+        x: currentX,
+        y: currentY,
+        targetX: entry.tileX,
+        targetY: entry.tileY,
+        facing: targetChanged
+          ? chooseFacing(currentX, currentY, entry.tileX, entry.tileY)
+          : (entry.facing ?? previous?.facing ?? "down"),
+        pose:
+          targetChanged ||
+          Math.hypot(currentX - entry.tileX, currentY - entry.tileY) > 0.08
+            ? "walk"
+            : entry.state === "studying"
+              ? "sitting"
+              : "idle",
       });
     });
 
@@ -361,8 +415,8 @@ export class SanctuaryCanvasEngine {
         },
         remotos: Array.from(this.remoteActors.values()).map((actor) => ({
           id: actor.id,
-          x: actor.tileX,
-          y: actor.tileY,
+          x: Number(actor.x.toFixed(2)),
+          y: Number(actor.y.toFixed(2)),
           state: actor.state,
           message: actor.message ?? "",
         })),
@@ -402,6 +456,7 @@ export class SanctuaryCanvasEngine {
   private step(deltaMs: number) {
     this.tick += deltaMs;
     this.updateLocalActor(deltaMs / 1000);
+    this.updateRemoteActors(deltaMs / 1000);
     if (
       this.localActor.temporaryBubble &&
       this.tick >= this.localActor.temporaryBubbleUntil
@@ -409,6 +464,39 @@ export class SanctuaryCanvasEngine {
       this.localActor.temporaryBubble = "";
       this.localActor.temporaryBubbleUntil = 0;
     }
+  }
+
+  private updateRemoteActors(deltaSeconds: number) {
+    this.remoteActors.forEach((actor) => {
+      const movement = movePointToward(
+        actor.x,
+        actor.y,
+        actor.targetX,
+        actor.targetY,
+        deltaSeconds,
+        actor.state === "studying" ? 2 : actor.state === "break" ? 1.45 : 1.75,
+      );
+
+      if (movement.arrived) {
+        actor.x = actor.targetX;
+        actor.y = actor.targetY;
+        actor.pose = actor.state === "studying" ? "sitting" : "idle";
+        if (actor.state === "studying") {
+          actor.facing = "up";
+        }
+        return;
+      }
+
+      actor.facing = chooseFacing(
+        actor.x,
+        actor.y,
+        actor.targetX,
+        actor.targetY,
+      );
+      actor.x = movement.x;
+      actor.y = movement.y;
+      actor.pose = "walk";
+    });
   }
 
   private updateLocalActor(deltaSeconds: number) {
@@ -484,11 +572,16 @@ export class SanctuaryCanvasEngine {
     deltaSeconds: number,
     speed: number,
   ) {
-    const dx = target.x - this.localActor.x;
-    const dy = target.y - this.localActor.y;
-    const distance = Math.hypot(dx, dy);
+    const movement = movePointToward(
+      this.localActor.x,
+      this.localActor.y,
+      target.x,
+      target.y,
+      deltaSeconds,
+      speed,
+    );
 
-    if (distance <= speed * deltaSeconds || distance < 0.05) {
+    if (movement.arrived) {
       this.localActor.x = target.x;
       this.localActor.y = target.y;
       return true;
@@ -500,9 +593,7 @@ export class SanctuaryCanvasEngine {
       target.x,
       target.y,
     );
-    const nextX = this.localActor.x + (dx / distance) * speed * deltaSeconds;
-    const nextY = this.localActor.y + (dy / distance) * speed * deltaSeconds;
-    const resolved = this.resolveLocalMovement(nextX, nextY, target);
+    const resolved = this.resolveLocalMovement(movement.x, movement.y, target);
     this.localActor.x = resolved.x;
     this.localActor.y = resolved.y;
     return false;
@@ -632,9 +723,9 @@ export class SanctuaryCanvasEngine {
       },
       ...Array.from(this.remoteActors.values()).map((actor, index) => ({
         id: actor.id,
-        x: actor.tileX,
+        x: actor.x,
         y:
-          actor.tileY +
+          actor.y +
           (actor.state === "break"
             ? Math.sin((this.tick + index * 90) / 420) * 0.08
             : 0),

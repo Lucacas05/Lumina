@@ -221,21 +221,34 @@ export function drawPixelAvatar(
   const socks = garmentTones[avatar.socksColor];
   const skin = skinTones[avatar.skinTone];
   const hair = hairTones[avatar.hairColor];
+  const walkFrame = Math.floor((tick / 110) % 4);
+  const stridePattern = [-1, 0, 1, 0] as const;
+  const stride = pose === "walk" ? stridePattern[walkFrame] : 0;
+  const torsoLean =
+    pose === "walk" ? (facing === "left" ? -1 : facing === "right" ? 1 : 0) : 0;
+  const bodyShiftX =
+    pose === "walk"
+      ? torsoLean * (stride === 0 ? 0 : 1) +
+        (facing === "up" ? Math.round(stride * 0.5) : 0)
+      : 0;
+  const headShiftX = bodyShiftX;
   const bodyWidth = avatar.sex === "masculino" ? 11 : 9;
-  const bodyX = Math.round(x - bodyWidth / 2);
+  const bodyX = Math.round(x - bodyWidth / 2 + bodyShiftX);
   const bodyY = Math.round(y - (pose === "sitting" ? 14 : 18));
-  const headX = Math.round(x - 4);
+  const headX = Math.round(x - 4 + headShiftX);
   const headY = bodyY - 7;
-  const stepFrame = Math.round((tick / 160) % 2);
-  const walkOffset = pose === "walk" ? (stepFrame === 0 ? -1 : 1) : 0;
+  const walkOffset = pose === "walk" ? stride : 0;
   const bob =
     pose === "walk"
-      ? stepFrame === 0
+      ? walkFrame % 2 === 0
         ? 0
         : 1
       : state === "break"
         ? Math.round(Math.sin(tick / 260) * 0.8)
         : 0;
+  const leftArmDrop = pose === "walk" ? (stride > 0 ? 1 : 0) : 0;
+  const rightArmDrop = pose === "walk" ? (stride < 0 ? 1 : 0) : 0;
+  const eyeShift = facing === "left" ? -1 : facing === "right" ? 1 : 0;
 
   px(ctx, x - 7, y - 1, 14, 3, "rgba(0,0,0,0.32)");
 
@@ -248,6 +261,15 @@ export function drawPixelAvatar(
     px(ctx, x + 1 - walkOffset, y - 7, 3, 7, lower);
     px(ctx, x - 4 + walkOffset, y - 4, 3, 2, socks);
     px(ctx, x + 1 - walkOffset, y - 4, 3, 2, socks);
+    px(ctx, bodyX - 1, bodyY + bob + 3 + leftArmDrop, 1, 5, upper.shadow);
+    px(
+      ctx,
+      bodyX + bodyWidth,
+      bodyY + bob + 3 + rightArmDrop,
+      1,
+      5,
+      upper.shadow,
+    );
   } else {
     px(ctx, x - 6, y - 5, 12, 4, "#4a3526");
     px(ctx, x - 4, y - 1, 3, 3, lower);
@@ -299,8 +321,8 @@ export function drawPixelAvatar(
     }
   }
 
-  px(ctx, headX + 2, headY + bob + 4, 1, 1, "#261a17");
-  px(ctx, headX + 5, headY + bob + 4, 1, 1, "#261a17");
+  px(ctx, headX + 2 + eyeShift, headY + bob + 4, 1, 1, "#261a17");
+  px(ctx, headX + 5 + eyeShift, headY + bob + 4, 1, 1, "#261a17");
   px(ctx, headX + 3, headY + bob + 6, 2, 1, "#8a5a38");
 
   drawAccessory(ctx, avatar, x, y - (pose === "sitting" ? 10 : 13), facing);
