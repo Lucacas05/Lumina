@@ -22,6 +22,7 @@ export const siteContent = {
   meta: {
     description:
       "Un santuario digital de estudio con identidad fantasy retro, biblioteca temática, sala de enfoque y crónicas inmersivas.",
+    siteName: "Lumina",
   },
   profile: {
     role: "Archivo local",
