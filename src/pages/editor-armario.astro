@@ -1,0 +1,8 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { WardrobeRulesEditor } from "@/islands/sanctuary/WardrobeRulesEditor";
+---
+
+<BaseLayout title="Editor del armario" currentPath="/editor-armario">
+  <WardrobeRulesEditor client:only="react" />
+</BaseLayout>

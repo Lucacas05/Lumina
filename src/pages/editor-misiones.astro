@@ -1,0 +1,8 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { MissionEditor } from "@/islands/sanctuary/MissionEditor";
+---
+
+<BaseLayout title="Editor de misiones" currentPath="/editor-misiones">
+  <MissionEditor client:only="react" />
+</BaseLayout>

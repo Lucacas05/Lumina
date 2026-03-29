@@ -1,0 +1,12 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { WardrobeStudio } from "@/islands/sanctuary/WardrobeStudio";
+---
+
+<BaseLayout
+  title="Armario"
+  currentPath="/armario"
+  description="Desbloquea prendas y accesorios del avatar en función del tiempo real de estudio acumulado."
+>
+  <WardrobeStudio client:only="react" />
+</BaseLayout>

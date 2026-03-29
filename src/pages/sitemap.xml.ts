@@ -8,6 +8,9 @@ const pages = [
   { path: "/biblioteca-compartida", priority: "0.7", changefreq: "daily" },
   { path: "/jardin", priority: "0.6", changefreq: "monthly" },
   { path: "/refinar", priority: "0.6", changefreq: "monthly" },
+  { path: "/armario", priority: "0.6", changefreq: "weekly" },
+  { path: "/editor-armario", priority: "0.5", changefreq: "monthly" },
+  { path: "/editor-misiones", priority: "0.5", changefreq: "monthly" },
   { path: "/editor-escenas", priority: "0.5", changefreq: "monthly" },
 ];
 
