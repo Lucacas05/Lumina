@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { BookOpen, Flame, History, ScrollText, Trophy, Users } from "lucide-react";
 import { siteContent } from "@/data/site";
 import { useGsapReveal } from "@/islands/sanctuary/useGsapReveal";
+import { PomodoroAnalytics } from "@/islands/sanctuary/PomodoroAnalytics";
 import {
   SOLO_ROOM_CODE,
   type ChronicleTone,
@@ -273,6 +274,12 @@ export function ChroniclesArchive() {
           <p className="mt-2 text-xs text-on-surface-variant">Marcas ya desbloqueadas por {summary.profile.displayName}.</p>
         </div>
       </section>
+
+      {!isAnonymous && (
+        <section className="gsap-rise">
+          <PomodoroAnalytics />
+        </section>
+      )}
 
       <section>
         <div className="mb-6 flex items-center justify-between gap-4">
