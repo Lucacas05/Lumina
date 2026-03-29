@@ -24,7 +24,7 @@ import {
   drawSceneBackground,
   drawSceneProp,
 } from "@/lib/sanctuary/canvas/renderer";
-import { sceneMaps } from "@/lib/sanctuary/canvas/sceneMaps";
+import { publishSceneMaps, sceneMaps } from "@/lib/sanctuary/canvas/sceneMaps";
 import {
   sceneLayerOrder,
   type Facing,
@@ -2409,6 +2409,11 @@ export function SceneEditor() {
     setFlash("JSON descargado");
   }
 
+  function applyToWeb() {
+    publishSceneMaps(draftsRef.current);
+    setFlash("Cambios aplicados a la web");
+  }
+
   function importJson() {
     try {
       const parsed = JSON.parse(importBuffer);
@@ -2450,7 +2455,7 @@ export function SceneEditor() {
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-on-surface-variant">
               Esta ruta no toca la navegación principal. Sirve para montar tus
               fondos, colocar props, definir spawn, asiento, nodos y exportar un
-              JSON listo para integrarlo después en el visor 2D.
+              JSON listo para exportarlo o aplicarlo a la web sin tocar código.
             </p>
           </div>
 
@@ -2470,6 +2475,13 @@ export function SceneEditor() {
               className="inline-flex items-center gap-2 border-2 border-outline-variant bg-surface px-4 py-3 font-headline text-xs font-bold uppercase tracking-[0.18em] text-on-surface disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Redo2 size={14} /> Rehacer
+            </button>
+            <button
+              type="button"
+              onClick={applyToWeb}
+              className="inline-flex items-center gap-2 border-2 border-tertiary bg-tertiary/12 px-4 py-3 font-headline text-xs font-bold uppercase tracking-[0.18em] text-tertiary hover:border-tertiary"
+            >
+              <Save size={14} /> Aplicar a la web
             </button>
             <button
               ref={copyButtonRef}
@@ -2798,8 +2810,8 @@ export function SceneEditor() {
                   1. Elige escena. 2. Cambia rápido entre `V` para seleccionar y
                   `C` para colocar props. 3. Ajusta propiedades. 4. Haz doble
                   clic en el canvas para mandar la selección al ratón. 5. Usa
-                  deshacer y rehacer si pruebas una variante. 6. Exporta el
-                  JSON.
+                  deshacer y rehacer si pruebas una variante. 6. Pulsa `Aplicar
+                  a la web` cuando quieras que el visor use esa versión.
                 </p>
               </div>
               {flash ? (
@@ -3407,7 +3419,13 @@ export function SceneEditor() {
               </p>
             </div>
             <ul className="space-y-2 text-sm leading-relaxed text-on-surface-variant">
-              <li>El editor guarda cada escena en local automáticamente.</li>
+              <li>
+                El editor guarda cada escena en borrador local automáticamente.
+              </li>
+              <li>
+                `Aplicar a la web` publica esos cambios para que el visor 2D
+                cargue esta versión en el navegador.
+              </li>
               <li>
                 Los props se exportan en el mismo formato que usa el visor
                 actual.

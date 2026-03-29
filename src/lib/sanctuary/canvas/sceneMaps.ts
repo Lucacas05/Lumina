@@ -1,4 +1,10 @@
-import type { SceneKind, SceneMap } from "@/lib/sanctuary/canvas/types";
+import type {
+  Facing,
+  SceneKind,
+  SceneMap,
+  SceneProp,
+  TilePoint,
+} from "@/lib/sanctuary/canvas/types";
 
 const libraryWall = { x: 747, y: 0, w: 741, h: 160 } as const;
 const rugLarge = { x: 451, y: 4, w: 159, h: 61 } as const;
@@ -783,8 +789,328 @@ export const sceneMaps: Record<SceneKind, SceneMap> = {
   },
 };
 
+export const PUBLISHED_SCENE_STORAGE_KEY =
+  "scholars-sanctuary-scene-published-v1";
+export const PUBLISHED_SCENE_EVENT = "scholars-sanctuary-scene-published";
+
+const sceneKinds: SceneKind[] = [
+  "solo-library",
+  "shared-library",
+  "public-library",
+  "garden",
+];
+
+let publishedSceneMapsCache: Partial<Record<SceneKind, SceneMap>> | null = null;
+
+function createPropId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function normalizeFacing(value: unknown, fallback: Facing): Facing {
+  return value === "up" ||
+    value === "down" ||
+    value === "left" ||
+    value === "right"
+    ? value
+    : fallback;
+}
+
+function normalizeRotation(value?: number) {
+  const safe = Number.isFinite(value) ? (value as number) : 0;
+  const normalized = ((safe % 360) + 360) % 360;
+  return normalized > 180 ? normalized - 360 : normalized;
+}
+
+function normalizeTilePoint(value: unknown, fallback: TilePoint): TilePoint {
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const point = value as Record<string, unknown>;
+  return {
+    x: typeof point.x === "number" ? point.x : fallback.x,
+    y: typeof point.y === "number" ? point.y : fallback.y,
+  };
+}
+
+export function cloneSceneMap(map: SceneMap): SceneMap {
+  return structuredClone(map);
+}
+
+export function normalizeSceneMap(
+  value: unknown,
+  sceneKind: SceneKind,
+): SceneMap {
+  const fallback = cloneSceneMap(sceneMaps[sceneKind]);
+
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const props = Array.isArray(candidate.props)
+    ? candidate.props
+        .filter((entry) => entry && typeof entry === "object")
+        .map((entry, index) => {
+          const prop = entry as Record<string, unknown>;
+          return {
+            id:
+              typeof prop.id === "string"
+                ? prop.id
+                : createPropId(`prop-${index}`),
+            atlas: typeof prop.atlas === "string" ? prop.atlas : undefined,
+            source:
+              prop.source && typeof prop.source === "object"
+                ? {
+                    x:
+                      typeof (prop.source as Record<string, unknown>).x ===
+                      "number"
+                        ? ((prop.source as Record<string, unknown>).x as number)
+                        : 0,
+                    y:
+                      typeof (prop.source as Record<string, unknown>).y ===
+                      "number"
+                        ? ((prop.source as Record<string, unknown>).y as number)
+                        : 0,
+                    w:
+                      typeof (prop.source as Record<string, unknown>).w ===
+                      "number"
+                        ? ((prop.source as Record<string, unknown>).w as number)
+                        : 0,
+                    h:
+                      typeof (prop.source as Record<string, unknown>).h ===
+                      "number"
+                        ? ((prop.source as Record<string, unknown>).h as number)
+                        : 0,
+                  }
+                : undefined,
+            x: typeof prop.x === "number" ? prop.x : 0,
+            y: typeof prop.y === "number" ? prop.y : 0,
+            w: typeof prop.w === "number" ? prop.w : 32,
+            h: typeof prop.h === "number" ? prop.h : 32,
+            rotation:
+              typeof prop.rotation === "number"
+                ? normalizeRotation(prop.rotation)
+                : 0,
+            layer:
+              prop.layer === "mid-back" ||
+              prop.layer === "mid-front" ||
+              prop.layer === "front"
+                ? prop.layer
+                : "back",
+            alpha: typeof prop.alpha === "number" ? prop.alpha : undefined,
+            tint: typeof prop.tint === "string" ? prop.tint : undefined,
+            hidden: typeof prop.hidden === "boolean" ? prop.hidden : undefined,
+            blocksMovement:
+              typeof prop.blocksMovement === "boolean"
+                ? prop.blocksMovement
+                : prop.shape === "path"
+                  ? false
+                  : undefined,
+            shape:
+              prop.shape === "tree" ||
+              prop.shape === "column" ||
+              prop.shape === "bench" ||
+              prop.shape === "path"
+                ? prop.shape
+                : undefined,
+          } satisfies SceneProp;
+        })
+    : fallback.props;
+
+  const normalizedSeatLocal =
+    candidate.seatLocal === null
+      ? undefined
+      : normalizeTilePoint(
+          candidate.seatLocal,
+          fallback.seatLocal ?? fallback.spawnLocal,
+        );
+  const normalizedSeatSlots = Array.isArray(candidate.seatSlots)
+    ? candidate.seatSlots.map((point) =>
+        normalizeTilePoint(point, fallback.seatLocal ?? fallback.spawnLocal),
+      )
+    : candidate.seatLocal
+      ? [
+          normalizedSeatLocal ??
+            normalizeTilePoint(
+              candidate.seatLocal,
+              fallback.seatLocal ?? fallback.spawnLocal,
+            ),
+        ]
+      : fallback.seatSlots;
+  const primarySeat = normalizedSeatSlots?.[0] ?? normalizedSeatLocal;
+
+  return {
+    name: sceneKind,
+    width:
+      typeof candidate.width === "number" ? candidate.width : fallback.width,
+    height:
+      typeof candidate.height === "number" ? candidate.height : fallback.height,
+    tileSize:
+      typeof candidate.tileSize === "number"
+        ? candidate.tileSize
+        : fallback.tileSize,
+    spawnLocal: normalizeTilePoint(candidate.spawnLocal, fallback.spawnLocal),
+    spawnFacing: normalizeFacing(
+      candidate.spawnFacing,
+      fallback.spawnFacing ?? "down",
+    ),
+    seatLocal: primarySeat,
+    seatSlots: normalizedSeatSlots,
+    seatFacings: Array.isArray(candidate.seatFacings)
+      ? candidate.seatFacings.map((facing, index) =>
+          normalizeFacing(
+            facing,
+            fallback.seatFacings?.[index] ?? fallback.spawnFacing ?? "up",
+          ),
+        )
+      : normalizedSeatSlots?.map(
+          (_point, index) =>
+            fallback.seatFacings?.[index] ?? fallback.spawnFacing ?? "up",
+        ),
+    wanderNodes: Array.isArray(candidate.wanderNodes)
+      ? candidate.wanderNodes.map((point) =>
+          normalizeTilePoint(point, fallback.spawnLocal),
+        )
+      : fallback.wanderNodes,
+    remoteSlots: Array.isArray(candidate.remoteSlots)
+      ? candidate.remoteSlots.map((point) =>
+          normalizeTilePoint(point, fallback.spawnLocal),
+        )
+      : fallback.remoteSlots,
+    remoteSlotFacings: Array.isArray(candidate.remoteSlotFacings)
+      ? candidate.remoteSlotFacings.map((facing, index) =>
+          normalizeFacing(facing, fallback.remoteSlotFacings?.[index] ?? "up"),
+        )
+      : fallback.remoteSlots.map(
+          (_point, index) => fallback.remoteSlotFacings?.[index] ?? "up",
+        ),
+    props,
+    theme: {
+      skyTop:
+        candidate.theme &&
+        typeof candidate.theme === "object" &&
+        typeof (candidate.theme as Record<string, unknown>).skyTop === "string"
+          ? ((candidate.theme as Record<string, unknown>).skyTop as string)
+          : fallback.theme.skyTop,
+      skyBottom:
+        candidate.theme &&
+        typeof candidate.theme === "object" &&
+        typeof (candidate.theme as Record<string, unknown>).skyBottom ===
+          "string"
+          ? ((candidate.theme as Record<string, unknown>).skyBottom as string)
+          : fallback.theme.skyBottom,
+      floorA:
+        candidate.theme &&
+        typeof candidate.theme === "object" &&
+        typeof (candidate.theme as Record<string, unknown>).floorA === "string"
+          ? ((candidate.theme as Record<string, unknown>).floorA as string)
+          : fallback.theme.floorA,
+      floorB:
+        candidate.theme &&
+        typeof candidate.theme === "object" &&
+        typeof (candidate.theme as Record<string, unknown>).floorB === "string"
+          ? ((candidate.theme as Record<string, unknown>).floorB as string)
+          : fallback.theme.floorB,
+      border:
+        candidate.theme &&
+        typeof candidate.theme === "object" &&
+        typeof (candidate.theme as Record<string, unknown>).border === "string"
+          ? ((candidate.theme as Record<string, unknown>).border as string)
+          : fallback.theme.border,
+      glow:
+        candidate.theme &&
+        typeof candidate.theme === "object" &&
+        typeof (candidate.theme as Record<string, unknown>).glow === "string"
+          ? ((candidate.theme as Record<string, unknown>).glow as string)
+          : fallback.theme.glow,
+    },
+  };
+}
+
+function loadPublishedSceneMapsFromStorage() {
+  if (typeof window === "undefined") {
+    return {} as Partial<Record<SceneKind, SceneMap>>;
+  }
+
+  const raw = window.localStorage.getItem(PUBLISHED_SCENE_STORAGE_KEY);
+  if (!raw) {
+    return {} as Partial<Record<SceneKind, SceneMap>>;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<Record<SceneKind, unknown>>;
+    return {
+      "solo-library": parsed["solo-library"]
+        ? normalizeSceneMap(parsed["solo-library"], "solo-library")
+        : undefined,
+      "shared-library": parsed["shared-library"]
+        ? normalizeSceneMap(parsed["shared-library"], "shared-library")
+        : undefined,
+      "public-library": parsed["public-library"]
+        ? normalizeSceneMap(parsed["public-library"], "public-library")
+        : undefined,
+      garden: parsed.garden
+        ? normalizeSceneMap(parsed.garden, "garden")
+        : undefined,
+    };
+  } catch {
+    return {} as Partial<Record<SceneKind, SceneMap>>;
+  }
+}
+
+function getPublishedSceneMaps() {
+  if (publishedSceneMapsCache === null) {
+    publishedSceneMapsCache = loadPublishedSceneMapsFromStorage();
+  }
+
+  return publishedSceneMapsCache;
+}
+
+export function refreshPublishedSceneMaps() {
+  publishedSceneMapsCache = loadPublishedSceneMapsFromStorage();
+  return publishedSceneMapsCache;
+}
+
+export function publishSceneMaps(
+  nextMaps: Partial<Record<SceneKind, SceneMap>>,
+) {
+  const normalized: Partial<Record<SceneKind, SceneMap>> = {};
+
+  sceneKinds.forEach((sceneKind) => {
+    if (nextMaps[sceneKind]) {
+      normalized[sceneKind] = normalizeSceneMap(nextMaps[sceneKind], sceneKind);
+    }
+  });
+
+  publishedSceneMapsCache = normalized;
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(
+      PUBLISHED_SCENE_STORAGE_KEY,
+      JSON.stringify(normalized),
+    );
+    window.dispatchEvent(new CustomEvent(PUBLISHED_SCENE_EVENT));
+  }
+
+  return normalized;
+}
+
+export function clearPublishedSceneMaps() {
+  publishedSceneMapsCache = {};
+
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(PUBLISHED_SCENE_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent(PUBLISHED_SCENE_EVENT));
+  }
+}
+
 export function getSceneMap(sceneKind: SceneKind) {
-  return sceneMaps[sceneKind];
+  return getPublishedSceneMaps()[sceneKind] ?? sceneMaps[sceneKind];
 }
 
 export function getRemoteSlot(sceneKind: SceneKind, index: number) {

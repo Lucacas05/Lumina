@@ -5,6 +5,11 @@ import {
   useImperativeHandle,
   useRef,
 } from "react";
+import {
+  PUBLISHED_SCENE_EVENT,
+  PUBLISHED_SCENE_STORAGE_KEY,
+  refreshPublishedSceneMaps,
+} from "@/lib/sanctuary/canvas/sceneMaps";
 import type { AvatarConfig } from "@/lib/sanctuary/store";
 import { SanctuaryCanvasEngine } from "@/lib/sanctuary/canvas/engine";
 import type {
@@ -85,6 +90,29 @@ export const SanctuaryCanvasViewport = forwardRef<
 
   useEffect(() => {
     engineRef.current?.setScene(sceneKind);
+  }, [sceneKind]);
+
+  useEffect(() => {
+    function syncPublishedScene() {
+      refreshPublishedSceneMaps();
+      engineRef.current?.setScene(sceneKind);
+    }
+
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== PUBLISHED_SCENE_STORAGE_KEY) {
+        return;
+      }
+
+      syncPublishedScene();
+    }
+
+    window.addEventListener(PUBLISHED_SCENE_EVENT, syncPublishedScene);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(PUBLISHED_SCENE_EVENT, syncPublishedScene);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [sceneKind]);
 
   useEffect(() => {
