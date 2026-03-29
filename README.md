@@ -75,9 +75,11 @@ https://luminalibrary.duckdns.org/
 - Requiere estos secrets en GitHub:
   - `VPS_IP`
   - `VPS_USER`
-  - `VPS_SSH_KEY`
   - `VPS_HOST_FINGERPRINT`
+  - `VPS_SSH_KEY` para el modo endurecido definitivo
+  - `VPS_PASSWORD` solo como compatibilidad temporal mientras se provisiona la clave
 - El workflow:
+  - prioriza `VPS_SSH_KEY` y cae temporalmente a `VPS_PASSWORD` si la clave aún no existe
   - hace `git pull`
   - ejecuta `npm ci`
   - valida SQLite con `npm run db:check`

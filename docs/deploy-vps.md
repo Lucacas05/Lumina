@@ -61,8 +61,9 @@ The deploy workflow expects:
 
 - `VPS_IP`
 - `VPS_USER`
-- `VPS_SSH_KEY`
 - `VPS_HOST_FINGERPRINT`
+- `VPS_SSH_KEY` for the hardened final setup
+- `VPS_PASSWORD` as a temporary compatibility fallback until the SSH key is provisioned
 
 To get the host fingerprint on the VPS:
 
@@ -71,10 +72,11 @@ ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub | awk '{print $2}'
 ```
 
 Copy the full private key into `VPS_SSH_KEY` including the `BEGIN/END OPENSSH PRIVATE KEY` lines.
+Until that key exists in GitHub, the workflow can still deploy with `VPS_PASSWORD`, but the issue remains open because the migration to dedicated key auth is not complete.
 
 ## Deploys after setup
 
-The GitHub Action now pulls, installs, builds, and restarts `lumina`:
+The GitHub Action now prefers `VPS_SSH_KEY` and falls back to `VPS_PASSWORD` only while the migration is incomplete. In both cases it pulls, installs, builds, and restarts `lumina`:
 
 ```bash
 cd /var/www/Scholar-s_Sanctuary

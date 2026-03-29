@@ -10,12 +10,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Conectando al VPS y actualizando
+      - name: Resolver modo de autenticación
+        id: deploy_auth
+        run: |
+          if [ -n "${{ secrets.VPS_SSH_KEY }}" ]; then
+            if [ -z "${{ secrets.VPS_HOST_FINGERPRINT }}" ]; then
+              echo "::error::VPS_HOST_FINGERPRINT es obligatorio cuando se usa VPS_SSH_KEY."
+              exit 1
+            fi
+
+            echo "mode=ssh_key" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "${{ secrets.VPS_PASSWORD }}" ]; then
+            echo "mode=password_fallback" >> "$GITHUB_OUTPUT"
+            echo "::warning::VPS_SSH_KEY no está configurado. El deploy usará VPS_PASSWORD como compatibilidad temporal."
+            exit 0
+          fi
+
+          echo "::error::No hay credenciales de despliegue configuradas. Define VPS_SSH_KEY o VPS_PASSWORD."
+          exit 1
+
+      - name: Conectando al VPS y actualizando con clave SSH
+        if: ${{ steps.deploy_auth.outputs.mode == 'ssh_key' }}
         uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f # v1.2.2
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
+          script: |
+            set -e
+            export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+            cd /var/www/Scholar-s_Sanctuary
+            git config --global --add safe.directory /var/www/Scholar-s_Sanctuary
+            git pull origin main
+            node --version
+            npm ci
+            npm run db:check
+            npm run build
+            sudo systemctl restart lumina
+            sleep 5
+            curl --fail --silent --show-error http://127.0.0.1:3000/api/me > /tmp/lumina-healthcheck.json
+            sudo systemctl --no-pager --full status lumina
+
+      - name: Conectando al VPS y actualizando con fallback temporal
+        if: ${{ steps.deploy_auth.outputs.mode == 'password_fallback' }}
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f # v1.2.2
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
           fingerprint: ${{ secrets.VPS_HOST_FINGERPRINT }}
           script: |
             set -e
