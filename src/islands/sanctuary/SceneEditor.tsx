@@ -27,6 +27,7 @@ import {
 import { sceneMaps } from "@/lib/sanctuary/canvas/sceneMaps";
 import {
   sceneLayerOrder,
+  type Facing,
   type SceneKind,
   type SceneLayer,
   type SceneMap,
@@ -128,6 +129,34 @@ const sceneLayerLabels: Record<SceneLayer, string> = {
   front: "Frente",
 };
 
+const facingLabels: Record<Facing, string> = {
+  down: "Frente",
+  left: "Izquierda",
+  up: "Espalda",
+  right: "Derecha",
+};
+
+const facingPresets: Array<{ value: Facing; rotation: number; label: string }> =
+  [
+    { value: "down", rotation: 0, label: "Frente" },
+    { value: "right", rotation: 90, label: "Derecha" },
+    { value: "up", rotation: 180, label: "Espalda" },
+    { value: "left", rotation: -90, label: "Izquierda" },
+  ];
+
+function normalizeFacing(value: unknown, fallback: Facing): Facing {
+  return value === "up" ||
+    value === "down" ||
+    value === "left" ||
+    value === "right"
+    ? value
+    : fallback;
+}
+
+function getFacingRotation(facing: Facing) {
+  return facingPresets.find((preset) => preset.value === facing)?.rotation ?? 0;
+}
+
 function clonePoint(point: TilePoint) {
   return { x: point.x, y: point.y };
 }
@@ -136,6 +165,8 @@ function cloneProp(prop: SceneProp): SceneProp {
   return {
     ...prop,
     source: prop.source ? { ...prop.source } : undefined,
+    hidden: prop.hidden,
+    blocksMovement: prop.blocksMovement,
   };
 }
 
@@ -143,10 +174,15 @@ function cloneSceneMap(map: SceneMap): SceneMap {
   return {
     ...map,
     spawnLocal: clonePoint(map.spawnLocal),
+    spawnFacing: map.spawnFacing,
     seatLocal: map.seatLocal ? clonePoint(map.seatLocal) : undefined,
     seatSlots: map.seatSlots?.map(clonePoint),
+    seatFacings: map.seatFacings ? [...map.seatFacings] : undefined,
     wanderNodes: map.wanderNodes.map(clonePoint),
     remoteSlots: map.remoteSlots.map(clonePoint),
+    remoteSlotFacings: map.remoteSlotFacings
+      ? [...map.remoteSlotFacings]
+      : undefined,
     props: map.props.map(cloneProp),
     theme: { ...map.theme },
   };
@@ -164,6 +200,46 @@ function setSeatPoints(scene: SceneMap, points: TilePoint[]) {
   const nextPoints = points.map(clonePoint);
   scene.seatSlots = nextPoints.length > 0 ? nextPoints : undefined;
   scene.seatLocal = nextPoints[0] ? clonePoint(nextPoints[0]) : undefined;
+  scene.seatFacings = nextPoints.length
+    ? nextPoints.map(
+        (_point, index) =>
+          scene.seatFacings?.[index] ?? scene.spawnFacing ?? "up",
+      )
+    : undefined;
+}
+
+function setSeatFacing(scene: SceneMap, index: number, facing: Facing) {
+  const seatPoints = getSeatPoints(scene);
+  if (!seatPoints[index]) {
+    return;
+  }
+
+  const nextFacings = seatPoints.map((_point, currentIndex) =>
+    currentIndex === index
+      ? facing
+      : (scene.seatFacings?.[currentIndex] ?? scene.spawnFacing ?? "up"),
+  );
+  scene.seatFacings = nextFacings;
+}
+
+function getSeatFacing(scene: SceneMap, index: number) {
+  return scene.seatFacings?.[index] ?? scene.spawnFacing ?? "up";
+}
+
+function setRemoteSlotFacing(scene: SceneMap, index: number, facing: Facing) {
+  if (!scene.remoteSlots[index]) {
+    return;
+  }
+
+  scene.remoteSlotFacings = scene.remoteSlots.map((_slot, currentIndex) =>
+    currentIndex === index
+      ? facing
+      : (scene.remoteSlotFacings?.[currentIndex] ?? "up"),
+  );
+}
+
+function getRemoteSlotFacing(scene: SceneMap, index: number) {
+  return scene.remoteSlotFacings?.[index] ?? "up";
 }
 
 function createDefaultDrafts(): EditorDrafts {
@@ -219,6 +295,8 @@ function buildCatalog(): PropCatalogItem[] {
           alpha: prop.alpha,
           tint: prop.tint,
           shape: prop.shape,
+          hidden: prop.hidden,
+          blocksMovement: prop.blocksMovement ?? prop.shape !== "path",
         },
       });
     });
@@ -255,6 +333,7 @@ function buildCatalog(): PropCatalogItem[] {
         ),
         rotation: 0,
         layer: "back",
+        blocksMovement: true,
       },
     });
   });
@@ -539,6 +618,13 @@ function normalizeSceneMap(value: unknown, sceneKind: SceneKind): SceneMap {
                 : "back",
             alpha: typeof prop.alpha === "number" ? prop.alpha : undefined,
             tint: typeof prop.tint === "string" ? prop.tint : undefined,
+            hidden: typeof prop.hidden === "boolean" ? prop.hidden : undefined,
+            blocksMovement:
+              typeof prop.blocksMovement === "boolean"
+                ? prop.blocksMovement
+                : prop.shape === "path"
+                  ? false
+                  : undefined,
             shape:
               prop.shape === "tree" ||
               prop.shape === "column" ||
@@ -583,8 +669,23 @@ function normalizeSceneMap(value: unknown, sceneKind: SceneKind): SceneMap {
         ? candidate.tileSize
         : fallback.tileSize,
     spawnLocal: normalizeTilePoint(candidate.spawnLocal, fallback.spawnLocal),
+    spawnFacing: normalizeFacing(
+      candidate.spawnFacing,
+      fallback.spawnFacing ?? "down",
+    ),
     seatLocal: primarySeat,
     seatSlots: normalizedSeatSlots,
+    seatFacings: Array.isArray(candidate.seatFacings)
+      ? candidate.seatFacings.map((facing, index) =>
+          normalizeFacing(
+            facing,
+            fallback.seatFacings?.[index] ?? fallback.spawnFacing ?? "up",
+          ),
+        )
+      : normalizedSeatSlots?.map(
+          (_point, index) =>
+            fallback.seatFacings?.[index] ?? fallback.spawnFacing ?? "up",
+        ),
     wanderNodes: Array.isArray(candidate.wanderNodes)
       ? candidate.wanderNodes.map((point) =>
           normalizeTilePoint(point, fallback.spawnLocal),
@@ -595,6 +696,13 @@ function normalizeSceneMap(value: unknown, sceneKind: SceneKind): SceneMap {
           normalizeTilePoint(point, fallback.spawnLocal),
         )
       : fallback.remoteSlots,
+    remoteSlotFacings: Array.isArray(candidate.remoteSlotFacings)
+      ? candidate.remoteSlotFacings.map((facing, index) =>
+          normalizeFacing(facing, fallback.remoteSlotFacings?.[index] ?? "up"),
+        )
+      : fallback.remoteSlots.map(
+          (_point, index) => fallback.remoteSlotFacings?.[index] ?? "up",
+        ),
     props,
     theme: {
       skyTop:
@@ -893,7 +1001,18 @@ function PropPreviewCanvas({
     }
 
     const previewProp = buildPreviewProp(prop, size);
-    drawSceneProp(ctx, previewProp, atlasImages);
+    drawSceneProp(
+      ctx,
+      {
+        ...previewProp,
+        hidden: false,
+        alpha:
+          previewProp.hidden && (previewProp.alpha ?? 1) > 0
+            ? Math.min(0.32, previewProp.alpha ?? 1)
+            : previewProp.alpha,
+      },
+      atlasImages,
+    );
 
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
     ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
@@ -1268,6 +1387,7 @@ export function SceneEditor() {
   const [selectedCatalogKey, setSelectedCatalogKey] = useState<string>(
     catalog[0]?.key ?? "",
   );
+  const [placementFacing, setPlacementFacing] = useState<Facing>("down");
   const [selection, setSelection] = useState<Selection>(null);
   const [zoom, setZoom] = useState(3);
   const [displayZoom, setDisplayZoom] = useState(3);
@@ -1634,19 +1754,42 @@ export function SceneEditor() {
       .sort(
         (left, right) => getLayerOrder(left.layer) - getLayerOrder(right.layer),
       )
-      .forEach((prop) => drawSceneProp(ctx, prop, atlasImages));
+      .forEach((prop) =>
+        drawSceneProp(
+          ctx,
+          prop.hidden
+            ? {
+                ...prop,
+                hidden: false,
+                alpha: Math.min(0.18, prop.alpha ?? 1),
+              }
+            : prop,
+          atlasImages,
+        ),
+      );
 
     if (showGrid) {
       drawGrid(ctx, scene);
     }
 
+    const selectedSeatIndex =
+      selection?.kind === "seatLocal" ? selection.index : null;
+    const previewSeat =
+      selectedSeatIndex !== null
+        ? (getSeatPoints(scene)[selectedSeatIndex] ?? null)
+        : null;
+    const previewPoint = previewSeat ?? scene.spawnLocal;
+    const previewFacing = previewSeat
+      ? getSeatFacing(scene, selectedSeatIndex ?? 0)
+      : (scene.spawnFacing ?? "down");
+
     drawPixelAvatar(ctx, {
       avatar: currentAvatar,
       state: "idle",
-      pose: getSeatPoints(scene).length > 0 ? "sitting" : "idle",
-      facing: "down",
-      x: Math.round(scene.spawnLocal.x * scene.tileSize),
-      y: Math.round(scene.spawnLocal.y * scene.tileSize),
+      pose: previewSeat ? "sitting" : "idle",
+      facing: previewFacing,
+      x: Math.round(previewPoint.x * scene.tileSize),
+      y: Math.round(previewPoint.y * scene.tileSize),
       tick: 0,
       highlighted: true,
     });
@@ -1656,7 +1799,19 @@ export function SceneEditor() {
       .sort(
         (left, right) => getLayerOrder(left.layer) - getLayerOrder(right.layer),
       )
-      .forEach((prop) => drawSceneProp(ctx, prop, atlasImages));
+      .forEach((prop) =>
+        drawSceneProp(
+          ctx,
+          prop.hidden
+            ? {
+                ...prop,
+                hidden: false,
+                alpha: Math.min(0.18, prop.alpha ?? 1),
+              }
+            : prop,
+          atlasImages,
+        ),
+      );
 
     drawMarker(
       ctx,
@@ -1869,6 +2024,10 @@ export function SceneEditor() {
     const prop: SceneProp = {
       id: createPropId(template.label.toLowerCase().replace(/\s+/g, "-")),
       ...template.template,
+      rotation: getFacingRotation(placementFacing),
+      hidden: false,
+      blocksMovement:
+        template.template.blocksMovement ?? template.template.shape !== "path",
       x: 0,
       y: 0,
     };
@@ -1908,6 +2067,9 @@ export function SceneEditor() {
       }
       if (selection.kind === "remoteSlots") {
         draft.remoteSlots.splice(selection.index, 1);
+        if (draft.remoteSlotFacings) {
+          draft.remoteSlotFacings.splice(selection.index, 1);
+        }
       }
     });
 
@@ -1994,6 +2156,11 @@ export function SceneEditor() {
     if (tool === "remoteSlots") {
       updateScene((draft) => {
         draft.remoteSlots.push(point);
+        draft.remoteSlotFacings = [
+          ...(draft.remoteSlotFacings ??
+            draft.remoteSlots.slice(0, -1).map(() => "up")),
+          "up",
+        ];
       });
       setSelection({ kind: "remoteSlots", index: scene.remoteSlots.length });
     }
@@ -2124,6 +2291,30 @@ export function SceneEditor() {
       }
 
       mutator(draft.remoteSlots[selection.index]);
+    });
+  }
+
+  function updateSelectedMarkerFacing(facing: Facing) {
+    if (
+      !selection ||
+      selection.kind === "prop" ||
+      selection.kind === "wanderNodes"
+    ) {
+      return;
+    }
+
+    updateScene((draft) => {
+      if (selection.kind === "spawnLocal") {
+        draft.spawnFacing = facing;
+        return;
+      }
+
+      if (selection.kind === "seatLocal") {
+        setSeatFacing(draft, selection.index, facing);
+        return;
+      }
+
+      setRemoteSlotFacing(draft, selection.index, facing);
     });
   }
 
@@ -2427,6 +2618,28 @@ export function SceneEditor() {
               ))}
             </div>
 
+            <div className="mt-4 border border-outline-variant bg-surface px-3 py-3">
+              <p className="font-headline text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
+                Orientacion al colocar
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {facingPresets.map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => setPlacementFacing(preset.value)}
+                    className={`border px-3 py-2 font-headline text-[10px] font-bold uppercase tracking-[0.16em] ${
+                      placementFacing === preset.value
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-outline-variant bg-surface-container-low text-on-surface"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {selectedCatalog ? (
               <div className="mt-4 border border-outline-variant bg-surface px-3 py-3">
                 <p className="font-headline text-[10px] font-bold uppercase tracking-[0.18em] text-outline">
@@ -2434,7 +2647,12 @@ export function SceneEditor() {
                 </p>
                 <div className="mt-3 flex items-center gap-3">
                   <PropPreviewCanvas
-                    prop={{ ...selectedCatalog.template, x: 0, y: 0 }}
+                    prop={{
+                      ...selectedCatalog.template,
+                      rotation: getFacingRotation(placementFacing),
+                      x: 0,
+                      y: 0,
+                    }}
                     atlasImages={atlasImages}
                     size={72}
                     className="shrink-0"
@@ -2451,6 +2669,9 @@ export function SceneEditor() {
                           : "Forma procedural"}{" "}
                       · {selectedCatalog.template.w}×
                       {selectedCatalog.template.h}
+                    </p>
+                    <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-secondary">
+                      Se colocara mirando a {facingLabels[placementFacing]}.
                     </p>
                     {selectedCatalog.template.atlas ? (
                       <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-primary">
@@ -2740,19 +2961,19 @@ export function SceneEditor() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2">
-                    {[0, 90, 180, -90].map((angle) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {facingPresets.map((preset) => (
                       <button
-                        key={angle}
+                        key={preset.value}
                         type="button"
                         onClick={() =>
                           updateSelectedProp((prop) => {
-                            prop.rotation = angle;
+                            prop.rotation = preset.rotation;
                           })
                         }
                         className="border border-outline-variant bg-surface px-2 py-2 font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface"
                       >
-                        {angle}°
+                        {preset.label}
                       </button>
                     ))}
                   </div>
@@ -2848,6 +3069,48 @@ export function SceneEditor() {
                       }
                       className="w-full border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
                     />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
+                      Visible
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateSelectedProp((prop) => {
+                          prop.hidden = !prop.hidden;
+                        })
+                      }
+                      className={`w-full border px-3 py-2 font-headline text-[10px] font-bold uppercase tracking-[0.16em] ${
+                        selectedProp.hidden
+                          ? "border-outline-variant bg-surface text-outline"
+                          : "border-primary bg-primary/12 text-primary"
+                      }`}
+                    >
+                      {selectedProp.hidden ? "Oculto en runtime" : "Visible"}
+                    </button>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
+                      Colision
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateSelectedProp((prop) => {
+                          prop.blocksMovement = !(prop.blocksMovement ?? true);
+                        })
+                      }
+                      className={`w-full border px-3 py-2 font-headline text-[10px] font-bold uppercase tracking-[0.16em] ${
+                        (selectedProp.blocksMovement ?? true)
+                          ? "border-primary bg-primary/12 text-primary"
+                          : "border-outline-variant bg-surface text-outline"
+                      }`}
+                    >
+                      {(selectedProp.blocksMovement ?? true)
+                        ? "Bloquea paso"
+                        : "No bloquea"}
+                    </button>
                   </label>
                 </div>
 
@@ -3028,6 +3291,33 @@ export function SceneEditor() {
                     />
                   </label>
                 </div>
+
+                {selection.kind !== "wanderNodes" ? (
+                  <label className="space-y-1">
+                    <span className="font-headline text-[10px] font-bold uppercase tracking-[0.16em] text-outline">
+                      Direccion
+                    </span>
+                    <select
+                      value={
+                        selection.kind === "spawnLocal"
+                          ? (scene.spawnFacing ?? "down")
+                          : selection.kind === "seatLocal"
+                            ? getSeatFacing(scene, selection.index)
+                            : getRemoteSlotFacing(scene, selection.index)
+                      }
+                      onChange={(event) =>
+                        updateSelectedMarkerFacing(event.target.value as Facing)
+                      }
+                      className="w-full border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
+                    >
+                      {facingPresets.map((preset) => (
+                        <option key={preset.value} value={preset.value}>
+                          {preset.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
 
                 {selection.kind !== "spawnLocal" ? (
                   <button

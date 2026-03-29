@@ -29,6 +29,7 @@ interface LocalActor {
   pose: ActorPose;
   facing: Facing;
   route: TilePoint[];
+  seatFacing: Facing;
   wanderIndex: number;
   wanderPauseMs: number;
   idleRoamCountdownMs: number;
@@ -44,6 +45,7 @@ interface RemoteActor extends CanvasRemotePlayer {
   targetX: number;
   targetY: number;
   pose: ActorPose;
+  restFacing: Facing;
 }
 
 interface CollisionRect {
@@ -116,13 +118,30 @@ function movePointToward(
   };
 }
 
-function getLocalSeatTarget(map: SceneMap) {
+function normalizeFacing(value: Facing | undefined, fallback: Facing) {
+  return value ?? fallback;
+}
+
+function getSeatFacing(map: SceneMap, index: number, fallback: Facing = "up") {
+  return normalizeFacing(map.seatFacings?.[index], fallback);
+}
+
+function getLocalSeatAssignment(map: SceneMap) {
   const seatSlots = map.seatSlots?.filter(Boolean) ?? [];
   if (seatSlots.length > 0) {
-    return seatSlots[Math.floor(Math.random() * seatSlots.length)];
+    const index = Math.floor(Math.random() * seatSlots.length);
+    return {
+      point: seatSlots[index],
+      facing: getSeatFacing(map, index),
+    };
   }
 
-  return map.seatLocal;
+  return map.seatLocal
+    ? {
+        point: map.seatLocal,
+        facing: getSeatFacing(map, 0),
+      }
+    : null;
 }
 
 function getNearestWanderIndex(map: SceneMap, x: number, y: number) {
@@ -172,6 +191,14 @@ function rectsOverlap(left: CollisionRect, right: CollisionRect) {
 function getPropCollisionRect(
   prop: SceneMap["props"][number],
 ): CollisionRect | null {
+  if (
+    prop.hidden ||
+    prop.blocksMovement === false ||
+    (prop.alpha ?? 1) <= 0.05
+  ) {
+    return null;
+  }
+
   if (prop.shape === "path" || (prop.w <= 18 && prop.h <= 18)) {
     return null;
   }
@@ -264,8 +291,9 @@ export class SanctuaryCanvasEngine {
       avatar,
       state: "idle",
       pose: "idle",
-      facing: "down",
+      facing: this.map.spawnFacing ?? "down",
       route: [],
+      seatFacing: getSeatFacing(this.map, 0),
       wanderIndex: 0,
       wanderPauseMs: 0,
       idleRoamCountdownMs: IDLE_AUTO_ROAM_DELAY_MS,
@@ -311,6 +339,8 @@ export class SanctuaryCanvasEngine {
     this.localActor.x = this.map.spawnLocal.x;
     this.localActor.y = this.map.spawnLocal.y;
     this.localActor.route = [];
+    this.localActor.facing = this.map.spawnFacing ?? "down";
+    this.localActor.seatFacing = getSeatFacing(this.map, 0);
     this.localActor.wanderIndex = 0;
     this.localActor.wanderPauseMs = 0;
     this.localActor.idleRoamCountdownMs = IDLE_AUTO_ROAM_DELAY_MS;
@@ -348,16 +378,17 @@ export class SanctuaryCanvasEngine {
   }
 
   iniciarFocus() {
-    const seatTarget = getLocalSeatTarget(this.map);
+    const seatAssignment = getLocalSeatAssignment(this.map);
     this.localActor.state = "studying";
     this.localActor.pose = "walk";
     this.localActor.autoBubble = "";
     this.localActor.temporaryBubble = "";
     this.localActor.idleRoamCountdownMs = IDLE_AUTO_ROAM_DELAY_MS;
     this.localActor.autoRoamMode = "none";
-    this.localActor.route = seatTarget ? [seatTarget] : [];
+    this.localActor.route = seatAssignment ? [seatAssignment.point] : [];
+    this.localActor.seatFacing = seatAssignment?.facing ?? "up";
 
-    if (!seatTarget) {
+    if (!seatAssignment) {
       this.localActor.pose = "idle";
       this.localActor.autoBubble = "Estudiando 📖";
       this.render();
@@ -437,6 +468,10 @@ export class SanctuaryCanvasEngine {
         facing: targetChanged
           ? chooseFacing(currentX, currentY, entry.tileX, entry.tileY)
           : (entry.facing ?? previous?.facing ?? "down"),
+        restFacing:
+          entry.facing ??
+          previous?.restFacing ??
+          (entry.state === "studying" ? "up" : "down"),
         pose:
           targetChanged ||
           Math.hypot(currentX - entry.tileX, currentY - entry.tileY) > 0.08
@@ -534,7 +569,7 @@ export class SanctuaryCanvasEngine {
         actor.y = actor.targetY;
         actor.pose = actor.state === "studying" ? "sitting" : "idle";
         if (actor.state === "studying") {
-          actor.facing = "up";
+          actor.facing = actor.restFacing;
         }
         return;
       }
@@ -567,7 +602,7 @@ export class SanctuaryCanvasEngine {
           this.localActor.state === "studying"
         ) {
           this.localActor.pose = "sitting";
-          this.localActor.facing = "up";
+          this.localActor.facing = this.localActor.seatFacing;
           this.localActor.autoBubble = "Estudiando 📖";
           this.focusResolver?.();
           this.focusResolver = null;
@@ -658,9 +693,11 @@ export class SanctuaryCanvasEngine {
     deltaSeconds: number,
     speed: number,
   ) {
+    const currentX = this.localActor.x;
+    const currentY = this.localActor.y;
     const movement = movePointToward(
-      this.localActor.x,
-      this.localActor.y,
+      currentX,
+      currentY,
       target.x,
       target.y,
       deltaSeconds,
@@ -668,23 +705,30 @@ export class SanctuaryCanvasEngine {
     );
 
     if (movement.arrived) {
+      if (Math.hypot(target.x - currentX, target.y - currentY) > 0.01) {
+        this.localActor.facing = chooseFacing(
+          currentX,
+          currentY,
+          target.x,
+          target.y,
+        );
+      }
       this.localActor.x = target.x;
       this.localActor.y = target.y;
       return true;
     }
 
-    this.localActor.facing = chooseFacing(
-      this.localActor.x,
-      this.localActor.y,
-      target.x,
-      target.y,
-    );
     const resolved = this.resolveLocalMovement(movement.x, movement.y, target);
     const progressed =
-      Math.hypot(
-        resolved.x - this.localActor.x,
-        resolved.y - this.localActor.y,
-      ) > 0.01;
+      Math.hypot(resolved.x - currentX, resolved.y - currentY) > 0.01;
+    if (progressed) {
+      this.localActor.facing = chooseFacing(
+        currentX,
+        currentY,
+        resolved.x,
+        resolved.y,
+      );
+    }
     this.localActor.x = resolved.x;
     this.localActor.y = resolved.y;
     return !progressed;

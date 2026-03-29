@@ -2,6 +2,7 @@ import type { Profile, Presence } from "@/lib/sanctuary/store";
 import { getSceneMap } from "@/lib/sanctuary/canvas/sceneMaps";
 import type {
   CanvasRemotePlayer,
+  Facing,
   SceneKind,
 } from "@/lib/sanctuary/canvas/types";
 
@@ -61,6 +62,14 @@ function buildStableRemoteSlotMap(sceneKind: SceneKind, ids: string[]) {
   return assignments;
 }
 
+function getRemoteFacing(
+  sceneKind: SceneKind,
+  slotIndex: number,
+  fallback: Facing,
+) {
+  return getSceneMap(sceneKind).remoteSlotFacings?.[slotIndex] ?? fallback;
+}
+
 export function toCanvasRemotePlayers(
   sceneKind: SceneKind,
   members: SceneMemberLike[],
@@ -73,6 +82,12 @@ export function toCanvasRemotePlayers(
 
   return remoteMembers.map((member, index) => {
     const slot = slotMap.get(member.profile.id);
+    const fallbackFacing =
+      member.presence.state === "studying"
+        ? "up"
+        : index % 2 === 0
+          ? "left"
+          : "right";
 
     if (!slot) {
       return {
@@ -81,12 +96,7 @@ export function toCanvasRemotePlayers(
         avatar: member.profile.avatar,
         tileX: 10,
         tileY: 9,
-        facing:
-          member.presence.state === "studying"
-            ? "up"
-            : index % 2 === 0
-              ? "left"
-              : "right",
+        facing: fallbackFacing,
         state:
           member.presence.state === "offline" ||
           member.presence.state === "away"
@@ -104,10 +114,14 @@ export function toCanvasRemotePlayers(
       tileY: slot.y,
       facing:
         member.presence.state === "studying"
-          ? "up"
-          : index % 2 === 0
-            ? "left"
-            : "right",
+          ? getRemoteFacing(
+              sceneKind,
+              getSceneMap(sceneKind).remoteSlots.findIndex(
+                (candidate) => candidate.x === slot.x && candidate.y === slot.y,
+              ),
+              fallbackFacing,
+            )
+          : fallbackFacing,
       state:
         member.presence.state === "offline" || member.presence.state === "away"
           ? "idle"

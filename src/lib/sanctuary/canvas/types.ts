@@ -60,6 +60,8 @@ export interface SceneProp {
   alpha?: number;
   tint?: string;
   shape?: "tree" | "column" | "bench" | "path";
+  hidden?: boolean;
+  blocksMovement?: boolean;
 }
 
 export interface SceneBackdropTheme {
@@ -77,10 +79,13 @@ export interface SceneMap {
   height: number;
   tileSize: number;
   spawnLocal: TilePoint;
+  spawnFacing?: Facing;
   seatLocal?: TilePoint;
   seatSlots?: TilePoint[];
+  seatFacings?: Facing[];
   wanderNodes: TilePoint[];
   remoteSlots: TilePoint[];
+  remoteSlotFacings?: Facing[];
   props: SceneProp[];
   theme: SceneBackdropTheme;
 }

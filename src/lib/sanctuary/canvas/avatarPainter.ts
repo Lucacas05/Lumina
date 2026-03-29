@@ -28,9 +28,9 @@ const CANVAS_AVATAR_FOOT_OFFSET = 34;
 const avatarImageCache = new Map<string, CachedAvatarImage>();
 
 const facingRowMap: Record<Facing, number> = {
-  down: 2,
+  down: 0,
   left: 1,
-  up: 0,
+  up: 2,
   right: 3,
 };
 
@@ -208,7 +208,7 @@ function getCachedAvatarImage(src: string) {
 
 function getAvatarFrame(pose: ActorPose, facing: Facing, tick: number) {
   const column = pose === "walk" ? walkColumnPattern[getWalkPhase(tick)] : 1;
-  const row = facingRowMap[pose === "sitting" ? "up" : facing];
+  const row = facingRowMap[facing];
 
   return {
     frameX: column * AVATAR_FRAME_SIZE,
@@ -432,14 +432,7 @@ function drawCanvasAvatarFromArt(
     }
   });
 
-  drawAvatarFaceOverlay(
-    ctx,
-    avatar,
-    pose === "sitting" ? "up" : facing,
-    drawX,
-    drawY,
-    CANVAS_AVATAR_SIZE,
-  );
+  drawAvatarFaceOverlay(ctx, avatar, facing, drawX, drawY, CANVAS_AVATAR_SIZE);
 
   if (hairFront) {
     drawAvatarLayer(ctx, hairFront, frameX, frameY, drawX, drawY);

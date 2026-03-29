@@ -57,6 +57,10 @@ export function drawSceneProp(
   prop: SceneProp,
   atlasImages: Partial<Record<string, HTMLImageElement>> | null,
 ) {
+  if (prop.hidden) {
+    return;
+  }
+
   ctx.save();
   ctx.globalAlpha = prop.alpha ?? 1;
   ctx.translate(prop.x + prop.w / 2, prop.y + prop.h / 2);
