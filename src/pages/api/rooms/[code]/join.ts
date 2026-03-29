@@ -83,7 +83,6 @@ export async function POST({ locals, params, request }: APIContext) {
     if (invitation) {
       acceptInvitationStatement.run(invitation.id);
     }
-
     insertMemberStatement.run(params.code, locals.user!.id);
   });
 
