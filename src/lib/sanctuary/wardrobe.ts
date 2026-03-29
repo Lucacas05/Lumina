@@ -15,6 +15,7 @@ export interface WardrobeUnlockRule<T extends WardrobeField = WardrobeField> {
   value: WardrobeValueMap[T];
   label: string;
   unlockLevel: number;
+  enabled: boolean;
 }
 
 export interface WardrobeConfig {
@@ -48,7 +49,7 @@ function hasWardrobeValue(field: WardrobeField, value: unknown) {
   }
 }
 
-function createRuleId<T extends WardrobeField>(
+export function createWardrobeRuleId<T extends WardrobeField>(
   field: T,
   value: WardrobeValueMap[T],
 ) {
@@ -60,14 +61,26 @@ function createRule<T extends WardrobeField>(
   value: WardrobeValueMap[T],
   label: string,
   unlockLevel: number,
+  enabled = true,
 ): WardrobeUnlockRule<T> {
   return {
-    id: createRuleId(field, value),
+    id: createWardrobeRuleId(field, value),
     field,
     value,
     label,
     unlockLevel,
+    enabled,
   };
+}
+
+function getOptionLabel<T extends WardrobeField>(
+  field: T,
+  value: WardrobeValueMap[T],
+) {
+  return (
+    avatarOptions[field].find((option) => option.value === value)?.label ??
+    String(value)
+  );
 }
 
 function buildDefaultWardrobeUnlockRules(): WardrobeUnlockRule[] {
@@ -153,6 +166,13 @@ function normalizeLevelStepFocusSeconds(value: unknown) {
   return Math.max(15 * 60, Math.round(value));
 }
 
+function buildFallbackRule<T extends WardrobeField>(
+  field: T,
+  value: WardrobeValueMap[T],
+) {
+  return createRule(field, value, getOptionLabel(field, value), 1);
+}
+
 function normalizeStoredRule(
   value: unknown,
   fallbackRule: WardrobeUnlockRule,
@@ -171,7 +191,7 @@ function normalizeStoredRule(
   }
 
   return {
-    id: createRuleId(
+    id: createWardrobeRuleId(
       record.field,
       record.value as WardrobeValueMap[typeof record.field],
     ),
@@ -182,6 +202,10 @@ function normalizeStoredRule(
         ? record.label.trim()
         : fallbackRule.label,
     unlockLevel: normalizeLevel(record.unlockLevel, fallbackRule.unlockLevel),
+    enabled:
+      typeof record.enabled === "boolean"
+        ? record.enabled
+        : fallbackRule.enabled,
   };
 }
 
@@ -195,6 +219,7 @@ function normalizeStoredConfig(value: unknown): WardrobeConfig {
   const record = value as Record<string, unknown>;
   const storedRules = Array.isArray(record.rules) ? record.rules : [];
   const storedRuleMap = new Map<string, unknown>();
+  const fallbackIdSet = new Set(fallback.rules.map((rule) => rule.id));
 
   storedRules.forEach((rule) => {
     if (!rule || typeof rule !== "object") {
@@ -211,7 +236,7 @@ function normalizeStoredConfig(value: unknown): WardrobeConfig {
     }
 
     storedRuleMap.set(
-      createRuleId(
+      createWardrobeRuleId(
         entry.field,
         entry.value as WardrobeValueMap[typeof entry.field],
       ),
@@ -219,13 +244,39 @@ function normalizeStoredConfig(value: unknown): WardrobeConfig {
     );
   });
 
+  const normalizedRules = fallback.rules.map((rule) =>
+    normalizeStoredRule(storedRuleMap.get(rule.id), rule),
+  );
+
+  storedRuleMap.forEach((rawRule, ruleId) => {
+    if (fallbackIdSet.has(ruleId)) {
+      return;
+    }
+
+    const [fieldValue, value] = ruleId.split(":");
+    if (
+      !isValidWardrobeField(fieldValue) ||
+      !hasWardrobeValue(fieldValue, value)
+    ) {
+      return;
+    }
+
+    normalizedRules.push(
+      normalizeStoredRule(
+        rawRule,
+        buildFallbackRule(
+          fieldValue,
+          value as WardrobeValueMap[typeof fieldValue],
+        ),
+      ),
+    );
+  });
+
   return {
     levelStepFocusSeconds: normalizeLevelStepFocusSeconds(
       record.levelStepFocusSeconds,
     ),
-    rules: fallback.rules.map((rule) =>
-      normalizeStoredRule(storedRuleMap.get(rule.id), rule),
-    ),
+    rules: normalizedRules,
   };
 }
 
@@ -312,6 +363,14 @@ export function getWardrobeUnlockRule<T extends WardrobeField>(
   ) as WardrobeUnlockRule<T> | undefined;
 }
 
+export function isWardrobeRuleEnabled<T extends WardrobeField>(
+  field: T,
+  value: WardrobeValueMap[T],
+  config: WardrobeConfig = defaultWardrobeConfig,
+) {
+  return getWardrobeUnlockRule(field, value, config)?.enabled ?? false;
+}
+
 export function getWardrobeRequirementLevel<T extends WardrobeField>(
   field: T,
   value: WardrobeValueMap[T],
@@ -337,6 +396,10 @@ export function isWardrobeItemUnlocked<T extends WardrobeField>(
   totalFocusSeconds: number,
   config: WardrobeConfig = defaultWardrobeConfig,
 ) {
+  if (!isWardrobeRuleEnabled(field, value, config)) {
+    return false;
+  }
+
   return totalFocusSeconds >= getWardrobeRequirement(field, value, config);
 }
 
@@ -347,11 +410,27 @@ export function listWardrobeRulesByField(
   return config.rules.filter((rule) => rule.field === field);
 }
 
+export function listVisibleWardrobeRulesByField(
+  field: WardrobeField,
+  config: WardrobeConfig = defaultWardrobeConfig,
+) {
+  return listWardrobeRulesByField(field, config).filter((rule) => rule.enabled);
+}
+
+export function listWardrobeCandidates(field: WardrobeField) {
+  return avatarOptions[field].map((option) => ({
+    field,
+    value: option.value,
+    label: option.label,
+  }));
+}
+
 export function getWardrobeUnlockSummary(
   totalFocusSeconds: number,
   config: WardrobeConfig = defaultWardrobeConfig,
 ) {
-  const enrichedRules = config.rules.map((rule) => {
+  const enabledRules = config.rules.filter((rule) => rule.enabled);
+  const enrichedRules = enabledRules.map((rule) => {
     const requiredFocusSeconds = getFocusSecondsForLevel(
       rule.unlockLevel,
       config.levelStepFocusSeconds,
@@ -373,11 +452,14 @@ export function getWardrobeUnlockSummary(
     totalFocusSeconds,
     config.levelStepFocusSeconds,
   );
-  const maxLevel = Math.max(...config.rules.map((rule) => rule.unlockLevel));
+  const maxLevel =
+    enabledRules.length > 0
+      ? Math.max(...enabledRules.map((rule) => rule.unlockLevel))
+      : 1;
 
   return {
     unlockedCount,
-    totalItems: config.rules.length,
+    totalItems: enabledRules.length,
     currentLevel,
     maxLevel,
     nextUnlock: nextUnlock

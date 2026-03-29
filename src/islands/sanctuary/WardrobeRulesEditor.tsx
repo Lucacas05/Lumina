@@ -1,5 +1,13 @@
 import { useMemo, useRef, useState } from "react";
-import { RotateCcw, Save, Settings2, Sparkles } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Plus,
+  RotateCcw,
+  Save,
+  Settings2,
+  Sparkles,
+} from "lucide-react";
 import { ItemModelPreview } from "@/islands/sanctuary/ItemModelPreview";
 import { PixelAvatar } from "@/islands/sanctuary/PixelAvatar";
 import { useGsapReveal } from "@/islands/sanctuary/useGsapReveal";
@@ -11,6 +19,8 @@ import {
   formatWardrobeDuration,
   getDefaultWardrobeConfig,
   getFocusSecondsForLevel,
+  getWardrobeUnlockRule,
+  listWardrobeCandidates,
   listWardrobeRulesByField,
   loadWardrobeConfig,
   resetWardrobeConfig,
@@ -46,6 +56,11 @@ export function WardrobeRulesEditor() {
     loadWardrobeConfig(),
   );
   const [savedMessage, setSavedMessage] = useState("");
+  const [newRuleField, setNewRuleField] = useState<WardrobeField>("upper");
+  const [newRuleValue, setNewRuleValue] = useState(
+    listWardrobeCandidates("upper")[0]?.value ?? "shirt-01-longsleeve",
+  );
+  const [newRuleLevel, setNewRuleLevel] = useState(1);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useGsapReveal(rootRef);
@@ -61,13 +76,25 @@ export function WardrobeRulesEditor() {
     [config],
   );
 
-  const maxUnlockLevel = Math.max(
-    ...config.rules.map((rule) => rule.unlockLevel),
-  );
+  const enabledCount = config.rules.filter((rule) => rule.enabled).length;
+  const maxUnlockLevel =
+    config.rules.length > 0
+      ? Math.max(...config.rules.map((rule) => rule.unlockLevel))
+      : 1;
   const totalUnlockWindow = getFocusSecondsForLevel(
     maxUnlockLevel,
     config.levelStepFocusSeconds,
   );
+  const addableCandidates = useMemo(
+    () => listWardrobeCandidates(newRuleField),
+    [newRuleField],
+  );
+
+  function ensureSelectedCandidate(field: WardrobeField) {
+    const nextValue =
+      listWardrobeCandidates(field)[0]?.value ?? "shirt-01-longsleeve";
+    setNewRuleValue(nextValue);
+  }
 
   function updateLevelStepMinutes(value: number) {
     setConfig((current) => ({
@@ -82,11 +109,68 @@ export function WardrobeRulesEditor() {
       ...current,
       rules: current.rules.map((rule) =>
         rule.id === ruleId
-          ? { ...rule, unlockLevel: Math.max(1, Math.round(unlockLevel || 1)) }
+          ? {
+              ...rule,
+              unlockLevel: Math.max(1, Math.round(unlockLevel || 1)),
+            }
           : rule,
       ),
     }));
     setSavedMessage("");
+  }
+
+  function updateRuleEnabled(ruleId: string, enabled: boolean) {
+    setConfig((current) => ({
+      ...current,
+      rules: current.rules.map((rule) =>
+        rule.id === ruleId ? { ...rule, enabled } : rule,
+      ),
+    }));
+    setSavedMessage("");
+  }
+
+  function addOrReactivateRule() {
+    const existing = getWardrobeUnlockRule(newRuleField, newRuleValue, config);
+
+    if (existing) {
+      setConfig((current) => ({
+        ...current,
+        rules: current.rules.map((rule) =>
+          rule.id === existing.id
+            ? {
+                ...rule,
+                enabled: true,
+                unlockLevel: Math.max(1, Math.round(newRuleLevel || 1)),
+              }
+            : rule,
+        ),
+      }));
+      setSavedMessage("Regla reactivada.");
+      return;
+    }
+
+    const candidate = addableCandidates.find(
+      (item) => item.value === newRuleValue,
+    );
+    if (!candidate) {
+      return;
+    }
+
+    setConfig((current) => ({
+      ...current,
+      rules: [
+        ...current.rules,
+        {
+          id: `${candidate.field}:${candidate.value}`,
+          field: candidate.field,
+          value: candidate.value,
+          label: candidate.label,
+          unlockLevel: Math.max(1, Math.round(newRuleLevel || 1)),
+          enabled: true,
+        },
+      ],
+    }));
+    setSavedMessage("Nueva prenda anadida al armario.");
   }
 
   function handleSave() {
@@ -114,9 +198,9 @@ export function WardrobeRulesEditor() {
                 Reglas de desbloqueo
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-on-surface-variant">
-                Aqui decides en que nivel aparece cada prenda. El armario
-                principal y las misiones leeran esta configuracion para pintar
-                los candados y el progreso del personaje.
+                Aqui decides en que nivel aparece cada prenda y si debe existir
+                en el circuito de progreso. Tambien puedes reactivar reglas o
+                anadir piezas al armario visible.
               </p>
             </div>
             <a
@@ -172,17 +256,93 @@ export function WardrobeRulesEditor() {
               <div className="flex items-center gap-2 text-secondary">
                 <Sparkles size={16} />
                 <p className="font-headline text-[10px] font-bold uppercase tracking-[0.22em]">
-                  Ventana total
+                  Estado
                 </p>
               </div>
               <p className="mt-4 font-headline text-2xl font-black uppercase tracking-tight text-on-surface">
-                Nivel {maxUnlockLevel}
+                {enabledCount}/{config.rules.length} visibles
               </p>
               <p className="mt-3 text-xs leading-relaxed text-on-surface-variant">
-                Con la configuracion actual, el ultimo item se abre tras{" "}
+                El ultimo hito visible se abre tras{" "}
                 {formatWardrobeDuration(totalUnlockWindow)}.
               </p>
             </article>
+          </div>
+
+          <div className="gsap-rise border border-outline-variant bg-surface-container p-5">
+            <p className="font-headline text-[10px] font-bold uppercase tracking-[0.22em] text-outline">
+              Anadir o reactivar
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.18em] text-outline">
+                  Categoria
+                </span>
+                <select
+                  value={newRuleField}
+                  onChange={(event) => {
+                    const nextField = event.target.value as WardrobeField;
+                    setNewRuleField(nextField);
+                    ensureSelectedCandidate(nextField);
+                  }}
+                  className="w-full border border-outline-variant bg-surface-container-low px-3 py-3 text-sm text-on-surface"
+                >
+                  {fields.map((field) => (
+                    <option key={field} value={field}>
+                      {fieldLabels[field]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.18em] text-outline">
+                  Prenda
+                </span>
+                <select
+                  value={newRuleValue}
+                  onChange={(event) =>
+                    setNewRuleValue(event.target.value as typeof newRuleValue)
+                  }
+                  className="w-full border border-outline-variant bg-surface-container-low px-3 py-3 text-sm text-on-surface"
+                >
+                  {addableCandidates.map((candidate) => (
+                    <option key={candidate.value} value={candidate.value}>
+                      {candidate.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.18em] text-outline">
+                  Nivel
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={newRuleLevel}
+                  onChange={(event) =>
+                    setNewRuleLevel(
+                      Math.max(1, Number(event.target.value) || 1),
+                    )
+                  }
+                  className="w-full border border-outline-variant bg-surface-container-low px-3 py-3 text-sm text-on-surface"
+                />
+              </label>
+
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={addOrReactivateRule}
+                  className="inline-flex w-full items-center justify-center gap-2 border-b-[3px] border-on-primary-fixed-variant bg-primary px-4 py-3 font-headline text-xs font-bold uppercase tracking-widest text-on-primary"
+                >
+                  <Plus size={14} />
+                  Guardar en armario
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="gsap-rise border border-outline-variant bg-surface-container p-5">
@@ -193,7 +353,7 @@ export function WardrobeRulesEditor() {
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">
                   {savedMessage ||
-                    "Ajusta niveles, guarda y luego revisa el resultado en el armario."}
+                    "Puedes ocultar prendas sin borrarlas y recuperarlas despues cuando quieras."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -234,7 +394,8 @@ export function WardrobeRulesEditor() {
               </h2>
             </div>
             <p className="font-headline text-[10px] font-bold uppercase tracking-[0.22em] text-outline">
-              {group.rules.length} piezas
+              {group.rules.filter((rule) => rule.enabled).length}/
+              {group.rules.length} visibles
             </p>
           </div>
 
@@ -248,39 +409,76 @@ export function WardrobeRulesEditor() {
               return (
                 <article
                   key={rule.id}
-                  className="border border-outline-variant bg-surface-container-low p-4"
+                  className={`border p-4 ${
+                    rule.enabled
+                      ? "border-outline-variant bg-surface-container-low"
+                      : "border-outline-variant/50 bg-surface-container-low/55"
+                  }`}
                 >
-                  <div className="flex justify-center">
-                    <ItemModelPreview
-                      field={rule.field}
-                      value={rule.value}
-                      avatar={avatar}
-                    />
+                  <div className={rule.enabled ? "" : "opacity-55"}>
+                    <div className="flex justify-center">
+                      <ItemModelPreview
+                        field={rule.field}
+                        value={rule.value}
+                        avatar={avatar}
+                      />
+                    </div>
+                    <p className="mt-3 font-headline text-sm font-black uppercase tracking-[0.14em] text-on-surface">
+                      {rule.label}
+                    </p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-outline">
+                      {rule.value}
+                    </p>
                   </div>
-                  <p className="mt-3 font-headline text-sm font-black uppercase tracking-[0.14em] text-on-surface">
-                    {rule.label}
-                  </p>
-                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-outline">
-                    {rule.value}
-                  </p>
 
-                  <label className="mt-4 block text-xs uppercase tracking-[0.18em] text-outline">
-                    Nivel de desbloqueo
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={rule.unlockLevel}
-                    onChange={(event) =>
-                      updateRuleLevel(rule.id, Number(event.target.value))
-                    }
-                    className="mt-2 w-full border border-outline-variant bg-surface-container px-3 py-3 font-headline text-lg font-black uppercase tracking-tight text-on-surface"
-                  />
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <label className="space-y-1">
+                      <span className="text-[10px] uppercase tracking-[0.18em] text-outline">
+                        Nivel
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={rule.unlockLevel}
+                        onChange={(event) =>
+                          updateRuleLevel(rule.id, Number(event.target.value))
+                        }
+                        className="w-full border border-outline-variant bg-surface-container px-3 py-3 font-headline text-lg font-black uppercase tracking-tight text-on-surface"
+                      />
+                    </label>
+
+                    <div className="space-y-1">
+                      <span className="block text-[10px] uppercase tracking-[0.18em] text-outline">
+                        Visible
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateRuleEnabled(rule.id, !rule.enabled)
+                        }
+                        className={`inline-flex w-full items-center justify-center gap-2 border px-3 py-3 font-headline text-[10px] font-bold uppercase tracking-[0.16em] ${
+                          rule.enabled
+                            ? "border-primary bg-primary/12 text-primary"
+                            : "border-outline-variant bg-surface text-outline"
+                        }`}
+                      >
+                        {rule.enabled ? (
+                          <Eye size={14} />
+                        ) : (
+                          <EyeOff size={14} />
+                        )}
+                        {rule.enabled ? "Visible" : "Oculta"}
+                      </button>
+                    </div>
+                  </div>
 
                   <p className="mt-3 text-xs leading-relaxed text-on-surface-variant">
-                    Se desbloquea al nivel {rule.unlockLevel} tras{" "}
-                    {formatWardrobeDuration(unlockTime)} de estudio acumulado.
+                    {rule.enabled
+                      ? `Se desbloquea al nivel ${rule.unlockLevel} tras ${formatWardrobeDuration(
+                          unlockTime,
+                        )}.`
+                      : "Esta prenda no aparece en el armario principal mientras siga oculta."}
                   </p>
                 </article>
               );

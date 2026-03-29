@@ -19,6 +19,7 @@ import {
   getWardrobeRequirementLevel,
   getWardrobeUnlockSummary,
   isWardrobeItemUnlocked,
+  listVisibleWardrobeRulesByField,
   loadWardrobeConfig,
   type WardrobeConfig,
   type WardrobeField,
@@ -137,10 +138,17 @@ export function WardrobeStudio() {
     () => getWardrobeUnlockSummary(totalFocusSeconds, wardrobeConfig),
     [totalFocusSeconds, wardrobeConfig],
   );
-  const currentOptions = useMemo(
-    () => avatarOptions[activeField],
-    [activeField],
-  );
+  const currentOptions = useMemo(() => {
+    const visibleValues = new Set(
+      listVisibleWardrobeRulesByField(activeField, wardrobeConfig).map(
+        (rule) => rule.value,
+      ),
+    );
+
+    return avatarOptions[activeField].filter((option) =>
+      visibleValues.has(option.value as AvatarConfig[typeof activeField]),
+    );
+  }, [activeField, wardrobeConfig]);
   const activeColorField = isGarmentField(activeField)
     ? garmentColorFieldByField[activeField]
     : null;
@@ -356,134 +364,141 @@ export function WardrobeStudio() {
             </p>
           </div>
 
-          <div className="grid max-h-[42rem] gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {currentOptions.map((option) => {
-              const typedValue =
-                option.value as AvatarConfig[typeof activeField];
-              const unlocked = isWardrobeItemUnlocked(
-                activeField,
-                typedValue,
-                totalFocusSeconds,
-                wardrobeConfig,
-              );
-              const requiredFocusSeconds = getWardrobeRequirement(
-                activeField,
-                typedValue,
-                wardrobeConfig,
-              );
-              const requiredLevel = getWardrobeRequirementLevel(
-                activeField,
-                typedValue,
-                wardrobeConfig,
-              );
-              const active = avatar[activeField] === option.value;
+          {currentOptions.length === 0 ? (
+            <div className="border border-outline-variant bg-surface-container-low px-4 py-5 text-sm leading-relaxed text-on-surface-variant">
+              No hay prendas visibles en esta categoria. Puedes reactivarlas o
+              anadir nuevas reglas desde el editor del armario.
+            </div>
+          ) : (
+            <div className="grid max-h-[42rem] gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {currentOptions.map((option) => {
+                const typedValue =
+                  option.value as AvatarConfig[typeof activeField];
+                const unlocked = isWardrobeItemUnlocked(
+                  activeField,
+                  typedValue,
+                  totalFocusSeconds,
+                  wardrobeConfig,
+                );
+                const requiredFocusSeconds = getWardrobeRequirement(
+                  activeField,
+                  typedValue,
+                  wardrobeConfig,
+                );
+                const requiredLevel = getWardrobeRequirementLevel(
+                  activeField,
+                  typedValue,
+                  wardrobeConfig,
+                );
+                const active = avatar[activeField] === option.value;
 
-              return (
-                <div
-                  key={option.value}
-                  onClick={() => {
-                    if (isAnonymous || !unlocked) {
-                      return;
-                    }
-                    sanctuaryActions.updateAvatar(activeField, typedValue);
-                  }}
-                  onKeyDown={(event) => {
-                    if (isAnonymous || !unlocked) {
-                      return;
-                    }
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
+                return (
+                  <div
+                    key={option.value}
+                    onClick={() => {
+                      if (isAnonymous || !unlocked) {
+                        return;
+                      }
                       sanctuaryActions.updateAvatar(activeField, typedValue);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={isAnonymous ? -1 : 0}
-                  className={`relative overflow-hidden border p-3 text-left transition ${
-                    active && unlocked
-                      ? "border-primary bg-primary/10"
-                      : unlocked
-                        ? "border-outline-variant bg-surface-container-low hover:border-secondary"
-                        : "border-outline-variant/60 bg-surface-container-low/60 opacity-85"
-                  } ${isAnonymous ? "cursor-not-allowed opacity-70" : ""}`}
-                >
-                  {!unlocked ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[linear-gradient(180deg,rgba(16,12,11,0.12),rgba(16,12,11,0.78))] px-4 text-center">
-                      <Lock size={18} className="text-primary" />
-                      <p className="font-headline text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                        Bloqueada
-                      </p>
-                      <p className="text-xs leading-relaxed text-on-surface">
-                        Se desbloquea al nivel {requiredLevel}.
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <div className={unlocked ? "" : "blur-[1px]"}>
-                    <div className="flex justify-center">
-                      <ItemModelPreview
-                        field={activeField}
-                        value={option.value}
-                        avatar={avatar}
-                      />
-                    </div>
-
-                    {activeColorField ? (
-                      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                        {colorOptions.map((colorOption) => {
-                          const selectedColor =
-                            avatar[activeColorField] === colorOption.value;
-
-                          return (
-                            <button
-                              key={colorOption.value}
-                              type="button"
-                              title={colorOption.label}
-                              aria-label={colorOption.label}
-                              onClick={(event) => {
-                                if (isAnonymous || !unlocked) {
-                                  return;
-                                }
-                                event.stopPropagation();
-                                sanctuaryActions.updateAvatar(
-                                  activeField,
-                                  typedValue,
-                                );
-                                sanctuaryActions.updateAvatar(
-                                  activeColorField,
-                                  colorOption.value as AvatarConfig[typeof activeColorField],
-                                );
-                              }}
-                              disabled={isAnonymous || !unlocked}
-                              className={`h-4 w-4 rounded-full border transition ${
-                                selectedColor && active
-                                  ? "scale-110 border-primary ring-2 ring-primary/40"
-                                  : "border-outline-variant hover:scale-105 hover:border-secondary"
-                              }`}
-                              style={{
-                                backgroundColor:
-                                  garmentColorMeta[colorOption.value].swatch,
-                              }}
-                            />
-                          );
-                        })}
+                    }}
+                    onKeyDown={(event) => {
+                      if (isAnonymous || !unlocked) {
+                        return;
+                      }
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        sanctuaryActions.updateAvatar(activeField, typedValue);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={isAnonymous ? -1 : 0}
+                    className={`relative overflow-hidden border p-3 text-left transition ${
+                      active && unlocked
+                        ? "border-primary bg-primary/10"
+                        : unlocked
+                          ? "border-outline-variant bg-surface-container-low hover:border-secondary"
+                          : "border-outline-variant/60 bg-surface-container-low/60 opacity-85"
+                    } ${isAnonymous ? "cursor-not-allowed opacity-70" : ""}`}
+                  >
+                    {!unlocked ? (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[linear-gradient(180deg,rgba(16,12,11,0.12),rgba(16,12,11,0.78))] px-4 text-center">
+                        <Lock size={18} className="text-primary" />
+                        <p className="font-headline text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                          Bloqueada
+                        </p>
+                        <p className="text-xs leading-relaxed text-on-surface">
+                          Se desbloquea al nivel {requiredLevel}.
+                        </p>
                       </div>
                     ) : null}
 
-                    <p className="mt-3 font-headline text-[11px] font-black uppercase tracking-[0.16em] text-on-surface">
-                      {option.label}
-                    </p>
-                    <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
-                      {unlocked
-                        ? `Disponible desde el nivel ${requiredLevel}.`
-                        : `Se desbloquea al nivel ${requiredLevel} tras ${formatWardrobeDuration(
-                            requiredFocusSeconds,
-                          )} de estudio total.`}
-                    </p>
+                    <div className={unlocked ? "" : "blur-[1px]"}>
+                      <div className="flex justify-center">
+                        <ItemModelPreview
+                          field={activeField}
+                          value={option.value}
+                          avatar={avatar}
+                        />
+                      </div>
+
+                      {activeColorField ? (
+                        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                          {colorOptions.map((colorOption) => {
+                            const selectedColor =
+                              avatar[activeColorField] === colorOption.value;
+
+                            return (
+                              <button
+                                key={colorOption.value}
+                                type="button"
+                                title={colorOption.label}
+                                aria-label={colorOption.label}
+                                onClick={(event) => {
+                                  if (isAnonymous || !unlocked) {
+                                    return;
+                                  }
+                                  event.stopPropagation();
+                                  sanctuaryActions.updateAvatar(
+                                    activeField,
+                                    typedValue,
+                                  );
+                                  sanctuaryActions.updateAvatar(
+                                    activeColorField,
+                                    colorOption.value as AvatarConfig[typeof activeColorField],
+                                  );
+                                }}
+                                disabled={isAnonymous || !unlocked}
+                                className={`h-4 w-4 rounded-full border transition ${
+                                  selectedColor && active
+                                    ? "scale-110 border-primary ring-2 ring-primary/40"
+                                    : "border-outline-variant hover:scale-105 hover:border-secondary"
+                                }`}
+                                style={{
+                                  backgroundColor:
+                                    garmentColorMeta[colorOption.value].swatch,
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      <p className="mt-3 font-headline text-[11px] font-black uppercase tracking-[0.16em] text-on-surface">
+                        {option.label}
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
+                        {unlocked
+                          ? `Disponible desde el nivel ${requiredLevel}.`
+                          : `Se desbloquea al nivel ${requiredLevel} tras ${formatWardrobeDuration(
+                              requiredFocusSeconds,
+                            )} de estudio total.`}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
     </div>
