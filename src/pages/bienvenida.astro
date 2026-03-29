@@ -1,0 +1,22 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { OnboardingFlow } from "@/islands/sanctuary/OnboardingFlow";
+
+const nextPath = Astro.url.searchParams.get("next");
+
+if (!Astro.locals.user) {
+  return Astro.redirect(`/api/auth/login?next=${encodeURIComponent("/bienvenida")}`);
+}
+---
+
+<BaseLayout title="Bienvenida" currentPath="/bienvenida" showFab={false}>
+  <OnboardingFlow
+    client:only="react"
+    initialUser={{
+      id: Astro.locals.user.id,
+      displayName: Astro.locals.user.displayName,
+      username: Astro.locals.user.username,
+    }}
+    nextPath={nextPath}
+  />
+</BaseLayout>

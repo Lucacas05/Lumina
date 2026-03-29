@@ -32,6 +32,7 @@ function ensureColumn(
 }
 
 function runMigrations(database: Database.Database) {
+  ensureColumn(database, "users", "last_seen_at", "TEXT");
   ensureColumn(database, "rooms", "privacy", "TEXT NOT NULL DEFAULT 'private'");
   ensureColumn(database, "room_invitations", "invite_code", "TEXT");
   ensureColumn(database, "room_invitations", "expires_at", "TEXT");

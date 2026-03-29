@@ -12,6 +12,7 @@ import { StudyTimer } from "@/islands/StudyTimer";
 import { SanctuaryCanvasScene } from "@/islands/sanctuary/SanctuaryCanvasScene";
 import type { SanctuaryCanvasHandle } from "@/lib/sanctuary/canvas/types";
 import { toCanvasRemotePlayers } from "@/islands/sanctuary/canvasRoomHelpers";
+import * as realtime from "@/lib/sanctuary/realtime";
 
 interface GardenRoomProps {
   backgroundUrl: string;
@@ -70,6 +71,37 @@ export function GardenRoom({ backgroundUrl: _backgroundUrl }: GardenRoomProps) {
       return () => window.cancelAnimationFrame(frame);
     }
   }, [currentPresence?.message, currentPresence?.state]);
+
+  useEffect(() => {
+    if (!currentRoom || isAnonymous) return;
+
+    realtime.joinRoom(currentRoom.code);
+
+    return () => {
+      realtime.leaveRoom();
+    };
+  }, [currentRoom?.code, isAnonymous]);
+
+  useEffect(() => {
+    if (!currentPresence || !currentRoom || isAnonymous) return;
+
+    const timer = sanctuary.timer;
+    realtime.sendPresenceUpdate(
+      currentPresence.state,
+      timer.phase,
+      timer.status,
+      timer.remainingSeconds,
+      currentPresence.message,
+    );
+  }, [
+    currentPresence?.state,
+    currentPresence?.message,
+    currentRoom?.code,
+    isAnonymous,
+    sanctuary.timer.phase,
+    sanctuary.timer.remainingSeconds,
+    sanctuary.timer.status,
+  ]);
 
   if (isAnonymous) {
     return (

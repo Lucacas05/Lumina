@@ -29,6 +29,7 @@ interface PresenceData {
   status: TimerStatus;
   remainingSeconds: number;
   message: string;
+  lastSeenAt: string | null;
 }
 const userPresences = new Map<string, PresenceData>();
 
@@ -40,6 +41,7 @@ interface CachedProfile {
   username: string;
   displayName: string;
   avatar: AvatarConfig;
+  lastSeenAt: string | null;
 }
 const userProfiles = new Map<string, CachedProfile>();
 
@@ -52,7 +54,15 @@ const checkRoomMembership = db.prepare(
 );
 
 const getUserProfile = db.prepare(
-  "SELECT id, username, display_name, avatar_url, state_json FROM users WHERE id = ?",
+  "SELECT id, username, display_name, avatar_url, state_json, last_seen_at FROM users WHERE id = ?",
+);
+
+const setUserOnlineStatement = db.prepare(
+  "UPDATE users SET last_seen_at = NULL, updated_at = datetime('now') WHERE id = ?",
+);
+
+const setUserLastSeenStatement = db.prepare(
+  "UPDATE users SET last_seen_at = datetime('now'), updated_at = datetime('now') WHERE id = ?",
 );
 
 // ---------------------------------------------------------------------------
@@ -119,6 +129,7 @@ interface UserRow {
   display_name: string;
   avatar_url: string | null;
   state_json: string | null;
+  last_seen_at: string | null;
 }
 
 function loadAndCacheProfile(userId: string): CachedProfile | null {
@@ -129,6 +140,7 @@ function loadAndCacheProfile(userId: string): CachedProfile | null {
     username: row.username,
     displayName: row.display_name,
     avatar: extractAvatar(row.state_json, userId),
+    lastSeenAt: row.last_seen_at,
   };
 
   userProfiles.set(userId, profile);
@@ -149,6 +161,7 @@ function buildMemberPresence(userId: string): RoomMemberPresence | null {
     status: "idle" as const,
     remainingSeconds: 0,
     message: "",
+    lastSeenAt: profile.lastSeenAt,
   };
 
   return {
@@ -161,6 +174,7 @@ function buildMemberPresence(userId: string): RoomMemberPresence | null {
     status: presence.status,
     remainingSeconds: presence.remainingSeconds,
     message: presence.message,
+    lastSeenAt: presence.lastSeenAt,
   };
 }
 
@@ -253,6 +267,7 @@ function handleJoinRoom(
       status: "idle",
       remainingSeconds: 0,
       message: "",
+      lastSeenAt: null,
     });
   }
 
@@ -288,7 +303,14 @@ function handlePresenceUpdate(
   remainingSeconds: number,
   message: string,
 ): void {
-  userPresences.set(userId, { state, phase, status, remainingSeconds, message });
+  userPresences.set(userId, {
+    state,
+    phase,
+    status,
+    remainingSeconds,
+    message,
+    lastSeenAt: state === "offline" ? new Date().toISOString() : null,
+  });
 
   const roomCode = userRooms.get(userId);
   if (roomCode) {
@@ -302,6 +324,7 @@ function handlePresenceUpdate(
         status,
         remainingSeconds,
         message,
+        lastSeenAt: state === "offline" ? new Date().toISOString() : null,
       },
       userId,
     );
@@ -314,6 +337,7 @@ function handlePresenceUpdate(
 
 function handleDisconnect(userId: string): void {
   leaveCurrentRoom(userId);
+  setUserLastSeenStatement.run(userId);
   connectedClients.delete(userId);
   userPresences.delete(userId);
   userProfiles.delete(userId);
@@ -444,6 +468,7 @@ function attachWebSocketServer(server: http.Server): void {
     }
 
     connectedClients.set(userId, ws);
+    setUserOnlineStatement.run(userId);
 
     // Pre-load the user's profile into cache
     loadAndCacheProfile(userId);

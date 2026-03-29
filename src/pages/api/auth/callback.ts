@@ -2,11 +2,14 @@ import type { APIContext } from "astro";
 import { db } from "@/lib/server/db";
 import { getGitHubOAuth } from "@/lib/server/oauth";
 import {
+  clearOAuthNextCookie,
   clearOAuthStateCookie,
   createSession,
+  getOAuthNextFromCookies,
   getOAuthStateFromCookies,
   setSessionCookie,
 } from "@/lib/server/session";
+import { getUserStateSnapshot } from "@/lib/server/user-state";
 
 interface GitHubUserResponse {
   id: number;
@@ -36,8 +39,10 @@ export async function GET({ cookies, redirect, request, url }: APIContext) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const storedState = getOAuthStateFromCookies(cookies);
+  const nextPath = getOAuthNextFromCookies(cookies);
 
   clearOAuthStateCookie(cookies, request);
+  clearOAuthNextCookie(cookies, request);
 
   if (!code || !state || !storedState || state !== storedState) {
     return redirect("/?auth=error");
@@ -71,7 +76,11 @@ export async function GET({ cookies, redirect, request, url }: APIContext) {
     const session = createSession(userId);
     setSessionCookie(cookies, session.id, request);
 
-    return redirect("/?auth=success");
+    const userState = getUserStateSnapshot(userId);
+    const targetPath =
+      nextPath ?? (userState.onboardingCompleted ? userState.preferredStartPath : "/bienvenida");
+
+    return redirect(`${targetPath}${targetPath.includes("?") ? "&" : "?"}auth=success`);
   } catch {
     return redirect("/?auth=error");
   }

@@ -23,6 +23,7 @@ type CookieJar = Pick<APIContext["cookies"], "get" | "set" | "delete">;
 
 const SESSION_COOKIE_NAME = "sanctuary_session";
 const OAUTH_STATE_COOKIE_NAME = "oauth_state";
+const OAUTH_NEXT_COOKIE_NAME = "oauth_next";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const OAUTH_STATE_TTL_SECONDS = 60 * 5;
 
@@ -137,4 +138,45 @@ export function setOAuthStateCookie(cookies: CookieJar, state: string, request: 
 
 export function clearOAuthStateCookie(cookies: CookieJar, request: Request) {
   deleteCookie(cookies, OAUTH_STATE_COOKIE_NAME, request);
+}
+
+function sanitizeNextPath(value: string | null | undefined) {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
+    return null;
+  }
+
+  if (trimmed.startsWith("/api/auth")) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+export function getOAuthNextFromCookies(cookies: CookieJar) {
+  return sanitizeNextPath(cookies.get(OAUTH_NEXT_COOKIE_NAME)?.value ?? null);
+}
+
+export function setOAuthNextCookie(cookies: CookieJar, nextPath: string, request: Request) {
+  const safePath = sanitizeNextPath(nextPath);
+  if (!safePath) {
+    deleteCookie(cookies, OAUTH_NEXT_COOKIE_NAME, request);
+    return;
+  }
+
+  cookies.set(OAUTH_NEXT_COOKIE_NAME, safePath, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isSecureCookie(request),
+    maxAge: OAUTH_STATE_TTL_SECONDS,
+  });
+}
+
+export function clearOAuthNextCookie(cookies: CookieJar, request: Request) {
+  deleteCookie(cookies, OAUTH_NEXT_COOKIE_NAME, request);
 }

@@ -1,13 +1,11 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { images } from "@/data/site";
-import { AuthModePanel } from "@/islands/sanctuary/AuthModePanel";
 import { GardenRoom } from "@/islands/sanctuary/GardenRoom";
 ---
 
 <BaseLayout title="Jardín" currentPath="/estudio">
   <div class="mx-auto max-w-7xl space-y-8">
-    <AuthModePanel client:only="react" contextLabel="Acceso al jardín" compact={true} />
     <GardenRoom client:only="react" backgroundUrl={images.gardenTerrace} />
   </div>
 </BaseLayout>

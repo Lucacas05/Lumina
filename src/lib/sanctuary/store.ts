@@ -9,11 +9,12 @@ import {
 
 export type SessionState = "anonymous" | "authenticated";
 export type RoomKind = "solo" | "public" | "private";
-export type PresenceState = "idle" | "studying" | "break" | "offline";
+export type PresenceState = "idle" | "studying" | "break" | "away" | "offline";
 export type PresenceSpace = "solo" | "library" | "garden";
 export type TimerPhase = "focus" | "break";
 export type TimerStatus = "idle" | "running" | "paused";
 export type ChronicleTone = "primary" | "secondary" | "tertiary";
+export type PreferredStartPath = "/estudio" | "/biblioteca-compartida";
 
 const GARMENT_COLOR_VALUES = [
   "amber",
@@ -187,6 +188,7 @@ export interface Presence {
   space: PresenceSpace;
   message: string;
   updatedAt: number;
+  lastSeenAt?: number | null;
 }
 
 export interface TimerState {
@@ -242,6 +244,9 @@ export interface SanctuaryState {
   version: number;
   sessionState: SessionState;
   currentUserId: string | null;
+  onboardingCompleted: boolean;
+  onboardingGoal: string;
+  preferredStartPath: PreferredStartPath;
   currentRoomCode: string;
   profiles: Record<string, Profile>;
   rooms: Record<string, Room>;
@@ -556,6 +561,19 @@ const STORAGE_KEY = "scholars-sanctuary-state-v3";
 const CHANNEL_NAME = "scholars-sanctuary-live";
 const DEFAULT_PRIVATE_DESCRIPTION = "Sala reservada para amistades invitadas y foco compartido.";
 
+interface UserBootstrapPayload {
+  user: RemoteAccountIdentity | null;
+  onboardingCompleted?: boolean;
+  onboardingGoal?: string;
+  preferredStartPath?: PreferredStartPath;
+}
+
+declare global {
+  interface Window {
+    __luminaBootstrap?: UserBootstrapPayload;
+  }
+}
+
 export const anonymousPreviewAvatar: AvatarConfig = normalizeAvatarConfig({
   sex: "masculino",
   skinTone: "amber",
@@ -654,9 +672,12 @@ function createInitialState(): SanctuaryState {
   const profiles = Object.fromEntries(demoProfiles.map((profile) => [profile.id, profile]));
 
   return {
-    version: 7,
+    version: 8,
     sessionState: "anonymous",
     currentUserId: null,
+    onboardingCompleted: false,
+    onboardingGoal: "",
+    preferredStartPath: "/biblioteca-compartida",
     currentRoomCode: PUBLIC_ROOM_CODE,
     profiles,
     rooms: {
@@ -678,6 +699,7 @@ function createInitialState(): SanctuaryState {
         space: "library",
         message: "Estudiando",
         updatedAt: createdAt,
+        lastSeenAt: null,
       },
       "demo-bruno": {
         userId: "demo-bruno",
@@ -687,6 +709,7 @@ function createInitialState(): SanctuaryState {
         space: "garden",
         message: "Vuelvo en cinco minutos",
         updatedAt: createdAt,
+        lastSeenAt: null,
       },
       "demo-ines": {
         userId: "demo-ines",
@@ -696,6 +719,7 @@ function createInitialState(): SanctuaryState {
         space: "library",
         message: "Estudiando",
         updatedAt: createdAt,
+        lastSeenAt: null,
       },
     },
     timer: {
@@ -772,15 +796,24 @@ function normalizeStoredState(value: unknown) {
     parsed.version !== 4 &&
     parsed.version !== 5 &&
     parsed.version !== 6 &&
-    parsed.version !== 7
+    parsed.version !== 7 &&
+    parsed.version !== 8
   ) {
     return null;
   }
 
-  parsed.version = 7;
+  parsed.version = 8;
   parsed.sessionState =
     parsed.sessionState === "authenticated" || parsed.authMode === "account" ? "authenticated" : "anonymous";
   parsed.currentUserId = typeof parsed.currentUserId === "string" && parsed.currentUserId ? parsed.currentUserId : null;
+  parsed.onboardingCompleted =
+    typeof parsed.onboardingCompleted === "boolean" ? parsed.onboardingCompleted : fallback.onboardingCompleted;
+  parsed.onboardingGoal =
+    typeof parsed.onboardingGoal === "string" ? parsed.onboardingGoal : fallback.onboardingGoal;
+  parsed.preferredStartPath =
+    parsed.preferredStartPath === "/estudio" || parsed.preferredStartPath === "/biblioteca-compartida"
+      ? parsed.preferredStartPath
+      : fallback.preferredStartPath;
   parsed.currentRoomCode =
     typeof parsed.currentRoomCode === "string" && parsed.currentRoomCode
       ? parsed.currentRoomCode
@@ -806,6 +839,12 @@ function normalizeStoredState(value: unknown) {
     ...fallback.presences,
     ...(parsed.presences ?? {}),
   };
+  Object.values(parsed.presences).forEach((presence) => {
+    presence.lastSeenAt =
+      typeof presence.lastSeenAt === "number" && Number.isFinite(presence.lastSeenAt)
+        ? presence.lastSeenAt
+        : null;
+  });
   delete parsed.presences["guest-current"];
   parsed.sessions = (Array.isArray(parsed.sessions) ? parsed.sessions : [])
     .filter((session) => typeof session.userId === "string" && session.userId !== "guest-current")
@@ -953,12 +992,14 @@ function setCurrentPresence(state: SanctuaryState, next: Partial<Presence>) {
     space: "solo" as PresenceSpace,
     message: "",
     updatedAt: Date.now(),
+    lastSeenAt: null,
   };
 
   state.presences[state.currentUserId] = {
     ...current,
     ...next,
     updatedAt: Date.now(),
+    lastSeenAt: next.state === "offline" ? Date.now() : (next.lastSeenAt ?? null),
   };
 }
 
@@ -1150,6 +1191,61 @@ function remapUserReferences(state: SanctuaryState, fromUserId: string | null, t
   }
 }
 
+function attachAuthenticatedIdentity(state: SanctuaryState, identity: RemoteAccountIdentity) {
+  const previousUserId = state.currentUserId;
+  const existingProfile = state.profiles[identity.id];
+  const sourceProfile =
+    existingProfile ??
+    (previousUserId ? state.profiles[previousUserId] : null) ??
+    anonymousPreviewProfile;
+
+  remapUserReferences(state, previousUserId, identity.id);
+  state.sessionState = "authenticated";
+  state.currentUserId = identity.id;
+  state.currentRoomCode = state.rooms[state.currentRoomCode] ? state.currentRoomCode : PUBLIC_ROOM_CODE;
+  state.profiles[identity.id] = {
+    id: identity.id,
+    displayName: identity.displayName,
+    handle: toRemoteHandle(identity.username),
+    avatar: existingProfile?.avatar ?? sourceProfile?.avatar ?? anonymousPreviewAvatar,
+    bio:
+      existingProfile?.bio ??
+      sourceProfile?.bio ??
+      `Cuenta del santuario conectada con GitHub como ${toRemoteHandle(identity.username)}.`,
+    createdAt: existingProfile?.createdAt ?? sourceProfile?.createdAt ?? Date.now(),
+  };
+
+  if (!state.rooms[PUBLIC_ROOM_CODE].memberIds.includes(identity.id)) {
+    state.rooms[PUBLIC_ROOM_CODE].memberIds.unshift(identity.id);
+  }
+
+  if (previousUserId && previousUserId !== identity.id && state.presences[previousUserId]) {
+    state.presences[previousUserId] = {
+      ...state.presences[previousUserId],
+      state: "offline",
+      message: "",
+      updatedAt: Date.now(),
+      lastSeenAt: Date.now(),
+    };
+  }
+
+  if (!state.presences[identity.id]) {
+    setCurrentPresence(state, {
+      roomCode: PUBLIC_ROOM_CODE,
+      roomKind: "public",
+      state: "idle",
+      space: "library",
+      message: "",
+      lastSeenAt: null,
+    });
+  }
+
+  if (state.timer.roomKind !== "solo" && !state.rooms[state.timer.roomCode]) {
+    state.timer.roomKind = "public";
+    state.timer.roomCode = PUBLIC_ROOM_CODE;
+  }
+}
+
 export type TimerEvent =
   | { kind: "focus-start" }
   | { kind: "focus-end" }
@@ -1193,6 +1289,16 @@ function ensureHydrated() {
 
   hydrated = true;
   currentState = readStoredState();
+  const bootstrap = window.__luminaBootstrap;
+  if (bootstrap?.user) {
+    attachAuthenticatedIdentity(currentState, bootstrap.user);
+    currentState.onboardingCompleted = Boolean(bootstrap.onboardingCompleted);
+    currentState.onboardingGoal = bootstrap.onboardingGoal?.trim() ?? currentState.onboardingGoal;
+    currentState.preferredStartPath =
+      bootstrap.preferredStartPath === "/estudio" || bootstrap.preferredStartPath === "/biblioteca-compartida"
+        ? bootstrap.preferredStartPath
+        : currentState.preferredStartPath;
+  }
   channel = new BroadcastChannel(CHANNEL_NAME);
 
   window.addEventListener("storage", (event) => {
@@ -1391,50 +1497,7 @@ export function getRoomMembers(state: SanctuaryState, roomCode: string, space: P
 export const sanctuaryActions = {
   connectGitHubAccount(identity: RemoteAccountIdentity) {
     commit((state) => {
-      const previousUserId = state.currentUserId;
-      const existingProfile = state.profiles[identity.id];
-      const sourceProfile = existingProfile ?? (previousUserId ? state.profiles[previousUserId] : null) ?? anonymousPreviewProfile;
-
-      remapUserReferences(state, previousUserId, identity.id);
-      state.sessionState = "authenticated";
-      state.currentUserId = identity.id;
-      state.currentRoomCode = state.rooms[state.currentRoomCode] ? state.currentRoomCode : PUBLIC_ROOM_CODE;
-      state.profiles[identity.id] = {
-        id: identity.id,
-        displayName: identity.displayName,
-        handle: toRemoteHandle(identity.username),
-        avatar: existingProfile?.avatar ?? sourceProfile?.avatar ?? anonymousPreviewAvatar,
-        bio: existingProfile?.bio ?? sourceProfile?.bio ?? `Cuenta del santuario conectada con GitHub como ${toRemoteHandle(identity.username)}.`,
-        createdAt: existingProfile?.createdAt ?? sourceProfile?.createdAt ?? Date.now(),
-      };
-
-      if (!state.rooms[PUBLIC_ROOM_CODE].memberIds.includes(identity.id)) {
-        state.rooms[PUBLIC_ROOM_CODE].memberIds.unshift(identity.id);
-      }
-
-      if (previousUserId && previousUserId !== identity.id && state.presences[previousUserId]) {
-        state.presences[previousUserId] = {
-          ...state.presences[previousUserId],
-          state: "offline",
-          message: "",
-          updatedAt: Date.now(),
-        };
-      }
-
-      if (!state.presences[identity.id]) {
-        setCurrentPresence(state, {
-          roomCode: PUBLIC_ROOM_CODE,
-          roomKind: "public",
-          state: "idle",
-          space: "library",
-          message: "",
-        });
-      }
-
-      if (state.timer.roomKind !== "solo" && !state.rooms[state.timer.roomCode]) {
-        state.timer.roomKind = "public";
-        state.timer.roomCode = PUBLIC_ROOM_CODE;
-      }
+      attachAuthenticatedIdentity(state, identity);
     });
   },
 
@@ -1451,6 +1514,7 @@ export const sanctuaryActions = {
           state: "offline",
           message: "",
           updatedAt: Date.now(),
+          lastSeenAt: Date.now(),
         };
       }
 
@@ -1476,6 +1540,31 @@ export const sanctuaryActions = {
         displayName: trimmed,
         handle: toHandle(trimmed),
       };
+    });
+  },
+
+  completeOnboarding(payload: {
+    displayName: string;
+    goal: string;
+    preferredStartPath: PreferredStartPath;
+  }) {
+    commit((state) => {
+      if (!state.currentUserId) {
+        return;
+      }
+
+      const trimmedName = payload.displayName.trim();
+      if (trimmedName) {
+        state.profiles[state.currentUserId] = {
+          ...state.profiles[state.currentUserId],
+          displayName: trimmedName,
+          handle: toHandle(trimmedName),
+        };
+      }
+
+      state.onboardingGoal = payload.goal.trim().slice(0, 220);
+      state.preferredStartPath = payload.preferredStartPath;
+      state.onboardingCompleted = true;
     });
   },
 
@@ -1546,6 +1635,7 @@ export const sanctuaryActions = {
           space: index % 2 === 0 ? "library" : "garden",
           message: index % 2 === 0 ? "" : "Nos vemos en la pausa",
           updatedAt: Date.now(),
+          lastSeenAt: null,
         };
       });
 
@@ -1555,6 +1645,7 @@ export const sanctuaryActions = {
         state: "idle",
         space: "library",
         message: "",
+        lastSeenAt: null,
       });
 
       recalculateAchievements(state, state.currentUserId);
@@ -1583,6 +1674,7 @@ export const sanctuaryActions = {
         state: "idle",
         space: "library",
         message: "",
+        lastSeenAt: null,
       });
     });
   },
@@ -1853,6 +1945,7 @@ export const sanctuaryActions = {
           space: member.state === "break" ? "garden" : "library",
           message: member.message,
           updatedAt: Date.now(),
+          lastSeenAt: member.lastSeenAt ? Date.parse(member.lastSeenAt) : null,
         };
       });
     });
@@ -1881,6 +1974,7 @@ export const sanctuaryActions = {
         space: member.state === "break" ? "garden" : "library",
         message: member.message,
         updatedAt: Date.now(),
+        lastSeenAt: member.lastSeenAt ? Date.parse(member.lastSeenAt) : null,
       };
 
       const room = state.rooms[state.currentRoomCode];
@@ -1902,16 +1996,26 @@ export const sanctuaryActions = {
     });
   },
 
-  updateRemotePresence(data: { userId: string; state: string; phase: string; status: string; remainingSeconds: number; message: string }) {
+  updateRemotePresence(data: {
+    userId: string;
+    state: string;
+    phase: string;
+    status: string;
+    remainingSeconds: number;
+    message: string;
+    lastSeenAt?: string | null;
+  }) {
     commit((state) => {
       if (data.userId === state.currentUserId) return;
 
       const presence = state.presences[data.userId];
       if (presence) {
         presence.state = data.state as PresenceState;
-        presence.space = data.state === "break" ? "garden" : "library";
+        presence.space =
+          data.state === "break" ? "garden" : data.state === "away" ? presence.space : "library";
         presence.message = data.message;
         presence.updatedAt = Date.now();
+        presence.lastSeenAt = data.lastSeenAt ? Date.parse(data.lastSeenAt) : presence.lastSeenAt ?? null;
       }
     });
   },

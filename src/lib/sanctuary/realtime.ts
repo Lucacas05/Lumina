@@ -6,9 +6,22 @@ let currentRoomCode: string | null = null;
 let reconnectAttempts = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let pingTimer: ReturnType<typeof setInterval> | null = null;
+let awayTimer: ReturnType<typeof setTimeout> | null = null;
+let awayListenersBound = false;
+let awayActive = false;
+let desiredPresence:
+  | {
+      state: PresenceState;
+      phase: TimerPhase;
+      status: TimerStatus;
+      remainingSeconds: number;
+      message: string;
+    }
+  | null = null;
 const messageListeners = new Set<(msg: ServerMessage) => void>();
 
 const MAX_RECONNECT_DELAY = 30_000;
+const AWAY_TIMEOUT_MS = 5 * 60 * 1000;
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -24,6 +37,70 @@ function clearTimers() {
     clearInterval(pingTimer);
     pingTimer = null;
   }
+
+  if (awayTimer !== null) {
+    clearTimeout(awayTimer);
+    awayTimer = null;
+  }
+}
+
+function rawSend(msg: ClientMessage) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+function scheduleAway() {
+  if (!isBrowser() || !desiredPresence) {
+    return;
+  }
+
+  if (awayTimer !== null) {
+    clearTimeout(awayTimer);
+  }
+
+  awayTimer = setTimeout(() => {
+    if (!desiredPresence || awayActive) {
+      return;
+    }
+
+    awayActive = true;
+    rawSend({
+      type: "presence-update",
+      state: "away",
+      phase: desiredPresence.phase,
+      status: desiredPresence.status,
+      remainingSeconds: desiredPresence.remainingSeconds,
+      message: "",
+    });
+  }, AWAY_TIMEOUT_MS);
+}
+
+function registerActivity() {
+  if (!desiredPresence) {
+    return;
+  }
+
+  if (awayActive) {
+    awayActive = false;
+    rawSend({
+      type: "presence-update",
+      ...desiredPresence,
+    });
+  }
+
+  scheduleAway();
+}
+
+function bindAwayListeners() {
+  if (!isBrowser() || awayListenersBound) {
+    return;
+  }
+
+  awayListenersBound = true;
+  ["pointerdown", "keydown", "mousemove", "touchstart", "focus"].forEach((eventName) => {
+    window.addEventListener(eventName, registerActivity, { passive: true });
+  });
 }
 
 function scheduleReconnect() {
@@ -93,15 +170,26 @@ export function connect() {
     return;
   }
 
+  bindAwayListeners();
+
   ws.addEventListener("open", () => {
     reconnectAttempts = 0;
+    awayActive = false;
 
     pingTimer = setInterval(() => {
-      send({ type: "ping" });
+      rawSend({ type: "ping" });
     }, 25_000);
 
     if (currentRoomCode) {
-      send({ type: "join-room", roomCode: currentRoomCode });
+      rawSend({ type: "join-room", roomCode: currentRoomCode });
+    }
+
+    if (desiredPresence) {
+      rawSend({
+        type: "presence-update",
+        ...desiredPresence,
+      });
+      scheduleAway();
     }
   });
 
@@ -122,6 +210,8 @@ export function disconnect() {
   clearTimers();
   currentRoomCode = null;
   reconnectAttempts = 0;
+  awayActive = false;
+  desiredPresence = null;
 
   if (ws) {
     ws.close();
@@ -130,9 +220,7 @@ export function disconnect() {
 }
 
 export function send(msg: ClientMessage) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
-  }
+  rawSend(msg);
 }
 
 export function joinRoom(roomCode: string) {
@@ -152,7 +240,16 @@ export function sendPresenceUpdate(
   remainingSeconds: number,
   message: string,
 ) {
-  send({
+  desiredPresence = {
+    state,
+    phase,
+    status,
+    remainingSeconds,
+    message,
+  };
+
+  awayActive = false;
+  rawSend({
     type: "presence-update",
     state,
     phase,
@@ -160,6 +257,7 @@ export function sendPresenceUpdate(
     remainingSeconds,
     message,
   });
+  scheduleAway();
 }
 
 export function onMessage(listener: (msg: ServerMessage) => void) {

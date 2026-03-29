@@ -6,11 +6,14 @@ declare module "*.sql?raw" {
 }
 
 type SessionUser = import("./lib/server/session").SessionUser;
+type UserStateSnapshot = import("./lib/server/user-state").UserStateSnapshot;
 
 declare namespace App {
   interface Locals {
     user: SessionUser | null;
     sessionId: string | null;
+    userState: UserStateSnapshot | null;
+    onboardingCompleted: boolean;
   }
 }
 

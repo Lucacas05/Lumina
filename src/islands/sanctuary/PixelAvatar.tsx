@@ -26,6 +26,7 @@ const stateIcons = {
   idle: MoonStar,
   studying: Flame,
   break: Sparkles,
+  away: MoonStar,
   offline: MoonStar,
 } as const;
 

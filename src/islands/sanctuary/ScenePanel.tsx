@@ -47,6 +47,10 @@ function getBubbleText(member: SceneMember) {
     return "Descansando";
   }
 
+  if (member.presence.state === "away") {
+    return "Ausente";
+  }
+
   return "Disponible";
 }
 

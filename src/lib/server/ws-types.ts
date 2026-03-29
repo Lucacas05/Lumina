@@ -1,6 +1,6 @@
 import type { AvatarConfig } from "@/lib/sanctuary/store";
 
-export type PresenceState = "idle" | "studying" | "break" | "offline";
+export type PresenceState = "idle" | "studying" | "break" | "away" | "offline";
 export type TimerPhase = "focus" | "break";
 export type TimerStatus = "idle" | "running" | "paused";
 
@@ -21,6 +21,7 @@ export interface RoomMemberPresence {
   status: TimerStatus;
   remainingSeconds: number;
   message: string;
+  lastSeenAt?: string | null;
 }
 
 // Client -> Server
@@ -50,6 +51,7 @@ export type ServerMessage =
       status: TimerStatus;
       remainingSeconds: number;
       message: string;
+      lastSeenAt?: string | null;
     }
   | { type: "friend-request"; from: UserSummary }
   | {

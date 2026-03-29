@@ -34,6 +34,7 @@ interface Friend {
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  lastSeenAt: string | null;
 }
 
 interface PendingRequest {
@@ -118,6 +119,24 @@ function initials(name: string): string {
     .slice(0, 2);
 }
 
+function formatLastSeen(value: string | null) {
+  if (!value) {
+    return "Activo recientemente";
+  }
+
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return "Activo recientemente";
+  }
+
+  return `Última vez ${new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(timestamp)}`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -161,7 +180,17 @@ export function ScribeGuild() {
       const res = await fetch("/api/friends");
       if (res.ok) {
         const data = await res.json();
-        setFriends(data.friends ?? []);
+        const rows = Array.isArray(data) ? data : data.friends ?? [];
+        setFriends(
+          rows.map((row: { id: string; friend?: Omit<Friend, "id" | "friendId"> & { id: string } }) => ({
+            id: row.id,
+            friendId: row.friend?.id ?? "",
+            username: row.friend?.username ?? "",
+            displayName: row.friend?.displayName ?? "",
+            avatarUrl: row.friend?.avatarUrl ?? null,
+            lastSeenAt: row.friend?.lastSeenAt ?? null,
+          })),
+        );
       }
     } catch {
       /* network error — keep previous state */
@@ -695,6 +724,9 @@ export function ScribeGuild() {
                           </p>
                           <p className="font-headline text-[10px] font-bold uppercase tracking-widest text-outline">
                             @{friend.username}
+                          </p>
+                          <p className="mt-1 text-[11px] text-on-surface-variant">
+                            {formatLastSeen(friend.lastSeenAt)}
                           </p>
                         </div>
                       </div>

@@ -7,7 +7,8 @@ const selectFriendsStatement = db.prepare(`
     u.id AS friendId,
     u.username,
     u.display_name AS displayName,
-    u.avatar_url AS avatarUrl
+    u.avatar_url AS avatarUrl,
+    u.last_seen_at AS lastSeenAt
   FROM friendships f
   INNER JOIN users u ON u.id = CASE
     WHEN f.user_id = ? THEN f.friend_id
@@ -30,6 +31,7 @@ export async function GET({ locals }: APIContext) {
     username: string;
     displayName: string;
     avatarUrl: string | null;
+    lastSeenAt: string | null;
   }[];
 
   const friends = rows.map((row) => ({
@@ -39,6 +41,7 @@ export async function GET({ locals }: APIContext) {
       username: row.username,
       displayName: row.displayName,
       avatarUrl: row.avatarUrl,
+      lastSeenAt: row.lastSeenAt,
     },
   }));
 

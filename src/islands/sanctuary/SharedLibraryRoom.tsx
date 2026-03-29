@@ -107,7 +107,13 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
       timer.remainingSeconds,
       currentPresence.message,
     );
-  }, [currentPresence?.state, sanctuary.timer.status, sanctuary.timer.phase]);
+  }, [
+    currentPresence?.state,
+    currentPresence?.message,
+    sanctuary.timer.status,
+    sanctuary.timer.phase,
+    sanctuary.timer.remainingSeconds,
+  ]);
 
   if (isAnonymous) {
     return (
@@ -292,6 +298,8 @@ export function SharedLibraryRoom({ backgroundUrl: _backgroundUrl }: SharedLibra
                     ? "Estudiando"
                     : presence?.state === "break"
                       ? "Descansando"
+                      : presence?.state === "away"
+                        ? "Ausente"
                       : "Disponible";
 
                 return (

@@ -1,13 +1,11 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { images } from "@/data/site";
-import { AuthModePanel } from "@/islands/sanctuary/AuthModePanel";
 import { SharedLibraryRoom } from "@/islands/sanctuary/SharedLibraryRoom";
 ---
 
 <BaseLayout title="Biblioteca compartida" currentPath="/estudio">
   <div class="mx-auto max-w-7xl space-y-8">
-    <AuthModePanel client:only="react" contextLabel="Acceso social" compact={true} />
     <SharedLibraryRoom client:only="react" backgroundUrl={images.silentWing} />
   </div>
 </BaseLayout>

@@ -25,7 +25,10 @@ export function toCanvasRemotePlayers(sceneKind: SceneKind, members: SceneMember
             : index % 2 === 0
               ? "left"
               : "right",
-        state: member.presence.state === "offline" ? "idle" : member.presence.state,
+        state:
+          member.presence.state === "offline" || member.presence.state === "away"
+            ? "idle"
+            : member.presence.state,
         message: member.presence.message,
       };
     });
