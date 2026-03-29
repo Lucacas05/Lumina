@@ -24,12 +24,32 @@ function isAccountOnlyPath(pathname: string) {
   );
 }
 
+function getPublicOrigin(request: Request) {
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = request.headers.get("host");
+
+  if (forwardedProto && forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  if (forwardedProto && host) {
+    return `${forwardedProto}://${host}`;
+  }
+
+  if (import.meta.env.SITE_URL) {
+    return import.meta.env.SITE_URL.replace(/\/+$/, "");
+  }
+
+  return new URL(request.url).origin;
+}
+
 function buildRedirectURL(
   request: Request,
   pathname: string,
   nextPath?: string,
 ) {
-  const url = new URL(pathname, request.url);
+  const url = new URL(pathname, getPublicOrigin(request));
   if (nextPath) {
     url.searchParams.set("next", nextPath);
   }
