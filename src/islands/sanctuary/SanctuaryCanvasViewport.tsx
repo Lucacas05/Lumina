@@ -1,4 +1,10 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  forwardRef,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "react";
 import type { AvatarConfig } from "@/lib/sanctuary/store";
 import { SanctuaryCanvasEngine } from "@/lib/sanctuary/canvas/engine";
 import type {
@@ -26,6 +32,24 @@ export const SanctuaryCanvasViewport = forwardRef<
 >(function SanctuaryCanvasViewport({ sceneKind, avatar, className }, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<SanctuaryCanvasEngine | null>(null);
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (!canvasRef.current || !engineRef.current) {
+      return;
+    }
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      return;
+    }
+
+    const pixelX =
+      ((event.clientX - rect.left) / rect.width) * canvasRef.current.width;
+    const pixelY =
+      ((event.clientY - rect.top) / rect.height) * canvasRef.current.height;
+
+    engineRef.current.moverA(pixelX / 16, pixelY / 16);
+  }
 
   useEffect(() => {
     if (!canvasRef.current) {
@@ -89,8 +113,9 @@ export const SanctuaryCanvasViewport = forwardRef<
   return (
     <canvas
       ref={canvasRef}
+      onPointerDown={handlePointerDown}
       className={className ?? "block max-h-full max-w-full"}
-      style={{ imageRendering: "pixelated" }}
+      style={{ imageRendering: "pixelated", cursor: "crosshair" }}
     />
   );
 });

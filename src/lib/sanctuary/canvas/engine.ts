@@ -365,6 +365,14 @@ export class SanctuaryCanvasEngine {
     this.render();
   }
 
+  moverA(tileX: number, tileY: number) {
+    const target = this.clampLocalPosition(tileX, tileY);
+    this.localActor.route = [target];
+    this.localActor.pose = "walk";
+    this.localActor.wanderPauseMs = 0;
+    this.render();
+  }
+
   actualizarOtrosJugadores(datos: CanvasRemotePlayer[]) {
     const next = new Map<string, RemoteActor>();
 
@@ -597,7 +605,7 @@ export class SanctuaryCanvasEngine {
       target.x,
       target.y,
     );
-    const resolved = this.resolveLocalMovement(movement.x, movement.y, target);
+    const resolved = this.clampLocalPosition(movement.x, movement.y);
     this.localActor.x = resolved.x;
     this.localActor.y = resolved.y;
     return false;

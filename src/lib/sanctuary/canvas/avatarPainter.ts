@@ -23,8 +23,8 @@ interface CachedAvatarImage {
 }
 
 const AVATAR_FRAME_SIZE = 64;
-const CANVAS_AVATAR_SIZE = 32;
-const CANVAS_AVATAR_FOOT_OFFSET = 28;
+const CANVAS_AVATAR_SIZE = 40;
+const CANVAS_AVATAR_FOOT_OFFSET = 34;
 const avatarImageCache = new Map<string, CachedAvatarImage>();
 
 const facingRowMap: Record<Facing, number> = {
@@ -35,6 +35,10 @@ const facingRowMap: Record<Facing, number> = {
 };
 
 const walkColumnPattern = [0, 1, 2, 1] as const;
+
+function getWalkPhase(tick: number) {
+  return Math.floor(tick / 110) % walkColumnPattern.length;
+}
 
 const skinTones = {
   amber: "#d8aa78",
@@ -203,15 +207,46 @@ function getCachedAvatarImage(src: string) {
 }
 
 function getAvatarFrame(pose: ActorPose, facing: Facing, tick: number) {
-  const column =
-    pose === "walk"
-      ? walkColumnPattern[Math.floor(tick / 110) % walkColumnPattern.length]
-      : 1;
+  const column = pose === "walk" ? walkColumnPattern[getWalkPhase(tick)] : 1;
   const row = facingRowMap[pose === "sitting" ? "up" : facing];
 
   return {
     frameX: column * AVATAR_FRAME_SIZE,
     frameY: row * AVATAR_FRAME_SIZE,
+  };
+}
+
+function drawGroundShadow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  highlighted: boolean,
+) {
+  if (highlighted) {
+    px(ctx, x - 9, y + 1, 18, 1, "rgba(255,185,97,0.32)");
+    px(ctx, x - 12, y + 2, 24, 2, "rgba(255,185,97,0.16)");
+  }
+
+  px(ctx, x - 6, y - 1, 12, 1, "rgba(0,0,0,0.16)");
+  px(ctx, x - 9, y, 18, 2, "rgba(0,0,0,0.26)");
+  px(ctx, x - 6, y + 2, 12, 1, "rgba(0,0,0,0.12)");
+}
+
+function getSpriteMotion(pose: ActorPose, facing: Facing, tick: number) {
+  if (pose !== "walk") {
+    return { x: 0, y: 0 };
+  }
+
+  const phase = getWalkPhase(tick);
+  const stridePattern = [-1.2, 0.2, 1.2, 0.2] as const;
+  const bobPattern = [0, -0.7, 0, 0.7] as const;
+  const stride = stridePattern[phase];
+  const bob = bobPattern[phase];
+
+  return {
+    x:
+      facing === "left" ? stride : facing === "right" ? -stride : stride * 0.45,
+    y: bob,
   };
 }
 
@@ -344,9 +379,10 @@ function drawCanvasAvatarFromArt(
   const manifest = getAvatarArtManifest(avatar);
   const showHair = manifest.accessoryKind !== "helmet";
   const { frameX, frameY } = getAvatarFrame(pose, facing, tick);
-  const drawX = Math.round(x - CANVAS_AVATAR_SIZE / 2);
+  const motion = getSpriteMotion(pose, facing, tick);
+  const drawX = Math.round(x - CANVAS_AVATAR_SIZE / 2 + motion.x);
   const drawY = Math.round(
-    y - CANVAS_AVATAR_FOOT_OFFSET + (pose === "sitting" ? 3 : 0),
+    y - CANVAS_AVATAR_FOOT_OFFSET + (pose === "sitting" ? 3 : 0) + motion.y,
   );
   const requiredSources = [
     manifest.body.src,
@@ -372,11 +408,7 @@ function drawCanvasAvatarFromArt(
     optionalSources.map((src) => [src, getCachedAvatarImage(src)]),
   );
 
-  px(ctx, x - 7, y - 1, 14, 3, "rgba(0,0,0,0.32)");
-
-  if (highlighted) {
-    px(ctx, x - 9, y + 3, 18, 2, "#ffb961");
-  }
+  drawGroundShadow(ctx, x, y, highlighted);
 
   const hairBack =
     showHair && manifest.hairBack
@@ -516,11 +548,7 @@ function drawFallbackAvatar(
   const rightArmDrop = pose === "walk" ? (stride < 0 ? 1 : 0) : 0;
   const eyeShift = facing === "left" ? -1 : facing === "right" ? 1 : 0;
 
-  px(ctx, x - 7, y - 1, 14, 3, "rgba(0,0,0,0.32)");
-
-  if (highlighted) {
-    px(ctx, x - 9, y + 3, 18, 2, "#ffb961");
-  }
+  drawGroundShadow(ctx, x, y, highlighted);
 
   if (pose !== "sitting") {
     px(ctx, x - 4 + walkOffset, y - 7, 3, 7, lower);
